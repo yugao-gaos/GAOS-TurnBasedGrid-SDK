@@ -23,4 +23,8 @@ export {
   type CliAgentProcess,
   type SpawnCliAgentOptions,
 } from './spawn.js';
-
+export {
+  AGENT_CLI_HELP,
+  runAgentCli,
+  type AgentCliIO,
+} from './command.js';
