@@ -1,14 +1,18 @@
 # GAOS Turn-Based Grid SDK
 
 TypeScript and Python clients for turn-based games hosted through the GAOS
-turn protocol. The repository contains two layers:
+turn protocol, plus a reusable deterministic TypeScript grid engine. The
+repository contains three layers:
 
 - a genre-neutral v1 turn envelope, cursor, retry, and simultaneous-intent
   protocol; and
-- Arena-specific clients and observation types for the hosted grid game.
+- Arena-specific clients and observation types for the hosted grid game; and
+- reusable grid mechanics, scoring, shortest-path solving, and replay
+  verification through the `./engine` package subpath.
 
-Game rules are not included. The API host or a separately distributed local
-engine remains authoritative.
+Product content and policy are not included. Zonoid characters and abilities,
+campaign game types, authored levels, and seasonal/server rules stay in the
+platform repository.
 
 ## TypeScript
 
@@ -28,7 +32,7 @@ Repositories with GitHub access can instead pin an exact release tag without
 configuring the npm registry:
 
 ```sh
-npm install 'git+https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK.git#v0.1.1'
+npm install 'git+https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK.git#v0.2.0'
 ```
 
 Use the hosted Arena client:
@@ -57,6 +61,21 @@ import {
 } from '@yugao-gaos/turn-based-grid-sdk/protocol';
 ```
 
+Deterministic runtimes can consume the reusable engine without importing the
+hosted Arena client:
+
+```ts
+import {
+  resolveMoves,
+  scoreStars,
+  solveGridLevel,
+} from '@yugao-gaos/turn-based-grid-sdk/engine';
+```
+
+The product supplies its reducer, levels, character catalog, ability data, and
+scoring thresholds. See [Engine boundary](docs/engine.md) for the ownership and
+adapter contracts.
+
 ## Python
 
 Python wheels and source distributions are attached to each GitHub release.
@@ -64,7 +83,7 @@ The distribution is named `gaos-turn-based-grid-sdk`; the stable import name
 remains `agilabs_arena` for compatibility with existing integrations.
 
 ```sh
-pip install gaos_turn_based_grid_sdk-0.1.1-py3-none-any.whl
+pip install gaos_turn_based_grid_sdk-0.2.0-py3-none-any.whl
 ```
 
 ```python

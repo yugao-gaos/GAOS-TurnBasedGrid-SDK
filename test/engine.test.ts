@@ -1,0 +1,108 @@
+import { describe, expect, it } from 'vitest';
+import {
+  budgetFailure,
+  resolveMoves,
+  roll,
+  scoreStars,
+  seededPermutation,
+  suggestStarThresholds,
+  type Cell,
+  type Mover,
+} from '../src/engine/index.js';
+
+const open = (x: number, y: number): boolean => x <= 0 || y <= 0 || x >= 4 || y >= 4;
+const mover = (id: string, from: Cell, to: Cell, priority = 1): Mover => ({
+  id,
+  from,
+  to,
+  priority,
+});
+const at = (result: Map<string, Cell>, id: string): Cell => result.get(id)!;
+
+describe('simultaneous movement', () => {
+  it('allows rotations and movement into cells vacated in the same turn', () => {
+    const result = resolveMoves([
+      mover('a', [1, 1], [2, 1]),
+      mover('b', [2, 1], [2, 2]),
+      mover('c', [2, 2], [1, 2]),
+      mover('d', [1, 2], [1, 1]),
+    ], open);
+    expect(at(result, 'a')).toEqual([2, 1]);
+    expect(at(result, 'b')).toEqual([2, 2]);
+    expect(at(result, 'c')).toEqual([1, 2]);
+    expect(at(result, 'd')).toEqual([1, 1]);
+  });
+
+  it('reverts a blocked movement chain', () => {
+    const result = resolveMoves([
+      mover('a', [1, 2], [2, 2]),
+      mover('b', [2, 2], [3, 2]),
+      mover('c', [3, 2], [4, 2]),
+    ], open);
+    expect(at(result, 'a')).toEqual([1, 2]);
+    expect(at(result, 'b')).toEqual([2, 2]);
+    expect(at(result, 'c')).toEqual([3, 2]);
+  });
+
+  it('uses priority for contested destinations', () => {
+    const result = resolveMoves([
+      mover('high', [1, 1], [2, 1], 0),
+      mover('low', [3, 1], [2, 1], 5),
+    ], open);
+    expect(at(result, 'high')).toEqual([2, 1]);
+    expect(at(result, 'low')).toEqual([3, 1]);
+  });
+
+  it('blocks head-on swaps unless one mover consents', () => {
+    const blocked = resolveMoves([
+      mover('a', [1, 1], [2, 1]),
+      mover('b', [2, 1], [1, 1]),
+    ], open);
+    expect(at(blocked, 'a')).toEqual([1, 1]);
+    expect(at(blocked, 'b')).toEqual([2, 1]);
+
+    const allowed = resolveMoves([
+      { ...mover('a', [1, 1], [2, 1]), swapOk: ['b'] },
+      mover('b', [2, 1], [1, 1]),
+    ], open);
+    expect(at(allowed, 'a')).toEqual([2, 1]);
+    expect(at(allowed, 'b')).toEqual([1, 1]);
+  });
+
+  it('checks the full footprint against blockers', () => {
+    const result = resolveMoves([{
+      ...mover('large', [1, 1], [2, 1]),
+      footprint: { width: 2, height: 2 },
+    }], (x, y) => x === 3 && y === 2);
+    expect(at(result, 'large')).toEqual([1, 1]);
+  });
+});
+
+describe('deterministic randomness', () => {
+  it('repeats event-keyed rolls and permutations for the same seed', () => {
+    expect(roll(42, 'hit:1')).toBe(roll(42, 'hit:1'));
+    expect(seededPermutation(8, 42)).toEqual(seededPermutation(8, 42));
+    expect(seededPermutation(8, 42)).not.toEqual(seededPermutation(8, 43));
+  });
+});
+
+describe('scoring and budgets', () => {
+  it('scores against product-supplied thresholds', () => {
+    expect(scoreStars(6, { three: 6, two: 9 })).toBe(3);
+    expect(scoreStars(7, { three: 6, two: 9 })).toBe(2);
+    expect(scoreStars(10, { three: 6, two: 9 })).toBe(1);
+  });
+
+  it('checks Energy before ActionBudget', () => {
+    expect(budgetFailure({ actionsUsed: 8, maxActions: 8, energyUsed: 4, energyCap: 4 }))
+      .toBe('out_of_energy');
+    expect(budgetFailure({ actionsUsed: 8, maxActions: 8, energyUsed: 3, energyCap: 4 }))
+      .toBe('out_of_action_budget');
+    expect(budgetFailure({ actionsUsed: 7, maxActions: 8, energyUsed: 3, energyCap: 4 }))
+      .toBeNull();
+  });
+
+  it('suggests the existing authored threshold ratios', () => {
+    expect(suggestStarThresholds(6)).toEqual({ three: 9, two: 12 });
+  });
+});
