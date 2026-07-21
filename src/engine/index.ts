@@ -21,6 +21,14 @@ export {
   type ChainReactionResult,
 } from './chain-reaction.js';
 export {
+  advancePathProjectiles,
+  resolveFlightPasses,
+  type FlightPassOptions,
+  type FlightPassResult,
+  type PathProjectileOptions,
+  type ProjectileAction,
+} from './projectiles.js';
+export {
   fnv1a,
   mulberry32,
   roll,
