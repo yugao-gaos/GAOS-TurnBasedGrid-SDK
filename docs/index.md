@@ -2,9 +2,9 @@
 layout: home
 
 hero:
-  name: GAOS Turn-Based Grid SDK
-  text: Deterministic mechanics for agent-ready games
-  tagline: Build, solve, replay, and evaluate turn-based grid environments without coupling reusable rules to a particular campaign or renderer.
+  name: GAOS Turn-Based Grid Toolkit
+  text: Game Agentic Open SDK
+  tagline: Deterministic grid mechanics and multiplayer infrastructure for agent-ready games.
   actions:
     - theme: brand
       text: Start building

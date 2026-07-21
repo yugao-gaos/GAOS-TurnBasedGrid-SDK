@@ -1,22 +1,22 @@
 import { defineConfig } from 'vitepress';
 
 export default defineConfig({
-  title: 'GAOS Grid SDK',
-  description: 'Deterministic turn-based grid mechanics and agentic-play infrastructure.',
+  title: 'GAOS Turn-Based Grid Toolkit',
+  description: 'Deterministic grid mechanics and multiplayer infrastructure for agent-ready games.',
   base: '/GAOS-TurnBasedGrid-SDK/',
   cleanUrls: true,
   lastUpdated: true,
   head: [
     ['meta', { name: 'theme-color', content: '#6657d9' }],
     ['meta', { property: 'og:type', content: 'website' }],
-    ['meta', { property: 'og:title', content: 'GAOS Turn-Based Grid SDK' }],
+    ['meta', { property: 'og:title', content: 'GAOS Turn-Based Grid Toolkit' }],
     ['meta', {
       property: 'og:url',
       content: 'https://yugao-gaos.github.io/GAOS-TurnBasedGrid-SDK/',
     }],
     ['meta', {
       property: 'og:description',
-      content: 'Reusable deterministic grid mechanics, turn protocols, and agent-ready environments.',
+      content: 'Deterministic grid mechanics and multiplayer infrastructure for agent-ready games.',
     }],
     ['meta', {
       property: 'og:image',
@@ -26,13 +26,13 @@ export default defineConfig({
     ['meta', { property: 'og:image:height', content: '630' }],
     ['meta', {
       property: 'og:image:alt',
-      content: 'GAOS Turn-Based Grid SDK — deterministic mechanics for agent-ready games',
+      content: 'GAOS Turn-Based Grid Toolkit — Deterministic grid mechanics and multiplayer infrastructure for agent-ready games.',
     }],
     ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
-    ['meta', { name: 'twitter:title', content: 'GAOS Turn-Based Grid SDK' }],
+    ['meta', { name: 'twitter:title', content: 'GAOS Turn-Based Grid Toolkit' }],
     ['meta', {
       name: 'twitter:description',
-      content: 'Reusable deterministic grid mechanics, turn protocols, and agent-ready environments.',
+      content: 'Deterministic grid mechanics and multiplayer infrastructure for agent-ready games.',
     }],
     ['meta', {
       name: 'twitter:image',
@@ -40,11 +40,11 @@ export default defineConfig({
     }],
     ['meta', {
       name: 'twitter:image:alt',
-      content: 'GAOS Turn-Based Grid SDK — deterministic mechanics for agent-ready games',
+      content: 'GAOS Turn-Based Grid Toolkit — Deterministic grid mechanics and multiplayer infrastructure for agent-ready games.',
     }],
   ],
   themeConfig: {
-    siteTitle: 'GAOS Grid SDK',
+    siteTitle: 'GAOS Turn-Based Grid Toolkit',
     nav: [
       { text: 'Guide', link: '/quickstart' },
       { text: 'Mechanisms', link: '/engine' },
@@ -94,8 +94,8 @@ export default defineConfig({
     },
     outline: { level: [2, 3], label: 'On this page' },
     footer: {
-      message: 'Reusable mechanics in the SDK. Product content stays in the product.',
-      copyright: 'GAOS Turn-Based Grid SDK',
+      message: 'Reusable mechanics in the toolkit. Product content stays in the product.',
+      copyright: 'GAOS Turn-Based Grid Toolkit',
     },
   },
 });

@@ -1,4 +1,4 @@
-# GAOS Turn-Based Grid SDK for Python
+# GAOS Turn-Based Grid Toolkit for Python
 
 Gymnasium-style client for the AgiLabs Arena session API — the environment
 wrapper for the hosted Arena API.

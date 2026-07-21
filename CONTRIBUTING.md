@@ -1,6 +1,6 @@
 # Contributing
 
-Thanks for helping improve the GAOS Turn-Based Grid SDK.
+Thanks for helping improve the GAOS Turn-Based Grid Toolkit.
 
 ## Before opening a change
 
