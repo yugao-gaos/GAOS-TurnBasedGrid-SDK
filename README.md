@@ -2,15 +2,13 @@
 
 GAOS stands for **Gaming AGI Open SDK**.
 
-**Games as benchmarks for human and AI agents.**
+**An open-source, community-driven SDK for building game-as-benchmark arenas
+where humans and AI agents compete on equal terms and are evaluated by the same
+standards to help advance AGI.**
 
-**Deterministic grid mechanics and multiplayer infrastructure for agent-ready
-games.**
-
-This AI-native toolkit provides
-TypeScript and Python clients for games hosted through the GAOS turn protocol,
-plus a reusable TypeScript engine and provider-neutral agent runtime. The
-repository contains six layers:
+GAOS provides TypeScript and Python clients for games hosted through its turn
+protocol, plus a reusable TypeScript engine and provider-neutral agent runtime.
+The repository contains six layers:
 
 - a genre-neutral v1 turn envelope, cursor, retry, and simultaneous-intent
   protocol;
@@ -30,14 +28,8 @@ platform repository.
 **[Read the documentation](https://yugao-gaos.github.io/GAOS-TurnBasedGrid-SDK/)**
 or begin with the [quickstart](https://yugao-gaos.github.io/GAOS-TurnBasedGrid-SDK/quickstart).
 
-**Built with GAOS:** [Zonoid](https://zonoid.ai) is the first game built with
-the GAOS Turn-Based Grid Toolkit—a strategy game for humans and AI agents,
-built around prediction, planning, and judgment. Its product content remains
-separate from the SDK.
-
-[Read how we built GAOS and Zonoid with GPT-5.6 Sol](docs/building-with-gpt-5-6-sol.md),
-from concepting and specialist asset production through engineering,
-publishing, and model-play testing.
+**Built with GAOS:** [Zonoid](https://zonoid.ai) is the toolkit's first
+production game and live reference.
 
 ## Built during OpenAI Build Week
 
@@ -48,13 +40,14 @@ grid engine, deterministic agent evaluation environment, provider-neutral
 drivers, and CLI integrations into an independently installable open-source
 toolkit with TypeScript and Python releases.
 
-The pre-existing Zonoid platform is outside the submission scope. It is the
-first hosted game built with GAOS and provides the live judge experience:
-judges can register at [zonoid.ai](https://zonoid.ai) and download the game
-build without rebuilding the platform source. The
-[GPT-5.6 Sol case study](docs/building-with-gpt-5-6-sol.md) records how Codex
-accelerated the SDK extraction, design decisions, implementation, review,
-documentation, publishing, and agent-play testing.
+The pre-existing Zonoid platform is outside the submission scope, but was
+central to production. As the game evolved, GAOS generalized, implemented, and
+tested the reusable capabilities needed to meet its new requirements; Zonoid
+then validated them in a live product. Judges can register at
+[zonoid.ai](https://zonoid.ai) and download the game without rebuilding its
+platform source. The [GPT-5.6 Sol case study](docs/building-with-gpt-5-6-sol.md)
+records Codex's role in extraction, design, implementation, review, publishing,
+and agent-play testing.
 
 ## Devpost judge guide
 
@@ -68,10 +61,6 @@ Session ID are collected in [DEVPOST.md](DEVPOST.md).
 - **Documentation:** https://yugao-gaos.github.io/GAOS-TurnBasedGrid-SDK/
 - **Release:** https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK/releases/tag/v0.9.1
 - **Live game and prebuilt download:** https://zonoid.ai
-
-The SDK is the submission. The Zonoid platform repository is outside the
-submission scope; Zonoid is the first game built with GAOS and the live
-judge-facing demonstration.
 
 ### Install and test a prebuilt release
 
