@@ -39,4 +39,4 @@ __all__ = [
     "Turn",
     "parse_turn_result",
 ]
-__version__ = "0.0.1"
+__version__ = "0.4.0"
