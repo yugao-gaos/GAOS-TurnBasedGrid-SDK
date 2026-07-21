@@ -3,7 +3,7 @@
 An AI-native SDK for deterministic, turn-based grid environments. It provides
 TypeScript and Python clients for games hosted through the GAOS turn protocol,
 plus a reusable TypeScript engine and provider-neutral agent runtime. The
-repository contains four layers:
+repository contains six layers:
 
 - a genre-neutral v1 turn envelope, cursor, retry, and simultaneous-intent
   protocol; and
@@ -12,7 +12,11 @@ repository contains four layers:
   solving, and replay verification through the `./engine` package subpath; and
 - deterministic agent episodes with concrete action discovery, Gym-style
   termination, rewards, transcripts, batch evaluation, and portable tool
-  definitions.
+  definitions; and
+- extensible keyed-model drivers for Anthropic, OpenAI, xAI, and OpenRouter;
+  and
+- reusable launch recipes and a standalone CLI for Claude Code, Codex, Cursor,
+  Grok, OpenCode, and declarative custom agents.
 
 Product content and policy are not included. Zonoid characters and abilities,
 campaign game types, authored levels, and seasonal/server rules stay in the
@@ -99,6 +103,35 @@ console.log(episode.transcript.result);
 
 See [Agentic play](docs/agentic-play.md) for local, hosted, batch-evaluation,
 Python, and tool/MCP integration patterns.
+
+Run a keyed model directly through the reusable driver contract:
+
+```ts
+import {
+  createKeyedAgentDriver,
+  runAgentDriverEpisode,
+} from '@yugao-gaos/turn-based-grid-sdk/agent';
+
+const driver = createKeyedAgentDriver('openai', {
+  apiKey: process.env.OPENAI_API_KEY!,
+  model: 'your-model-id',
+});
+const result = await runAgentDriverEpisode(environment, driver);
+```
+
+Or use the installed executable. Keys are read from provider environment
+variables and are never accepted on the command line:
+
+```sh
+gaos-agent drivers
+gaos-agent check openai
+gaos-agent run openai --module ./environment.mjs --model your-model-id
+gaos-agent spawn codex --mcp-url http://127.0.0.1:9000/mcp --prompt "Complete the episode"
+```
+
+Node applications can import CLI launch/status APIs from the `./agent-cli`
+subpath. The core `./engine` and `./agent` subpaths do not depend on a CLI or a
+provider package.
 
 ## Python
 
