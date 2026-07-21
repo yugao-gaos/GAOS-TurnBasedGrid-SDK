@@ -1,10 +1,13 @@
 {
   "name": "@yugao-gaos/turn-based-grid-sdk",
-  "version": "0.4.0",
+  "version": "0.5.0",
   "description": "Reusable grid mechanics, turn protocol primitives, and clients for GAOS-hosted games",
   "type": "module",
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
+  "bin": {
+    "gaos-agent": "./dist/gaos-agent.js"
+  },
   "exports": {
     ".": {
       "types": "./dist/index.d.ts",
@@ -17,6 +20,14 @@
     "./engine": {
       "types": "./dist/engine/index.d.ts",
       "import": "./dist/engine/index.js"
+    },
+    "./agent": {
+      "types": "./dist/agent/index.d.ts",
+      "import": "./dist/agent/index.js"
+    },
+    "./agent-cli": {
+      "types": "./dist/agent-cli/index.d.ts",
+      "import": "./dist/agent-cli/index.js"
     }
   },
   "files": [
@@ -42,6 +53,7 @@
     "registry": "https://npm.pkg.github.com"
   },
   "devDependencies": {
+    "@types/node": "^22.20.1",
     "typescript": "^5.5.4",
     "vitest": "^3.2.7"
   }

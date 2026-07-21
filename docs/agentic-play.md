@@ -64,6 +64,136 @@ The adapter includes JSON input schemas and has no MCP, OpenAI, Anthropic, or
 other provider dependency. An MCP server or model tool API can register the
 definitions and forward calls to `adapter.call(name, input)`.
 
+## Keyed model drivers
+
+The `./agent` subpath includes a provider-neutral `AgentDriver` contract and
+an extensible `AgentDriverRegistry`. `runAgentDriverEpisode` connects any
+driver to `AgentEnvironment`, records each decision, and returns the normal
+deterministic transcript.
+
+```ts
+import {
+  AgentDriverRegistry,
+  createKeyedAgentDriver,
+  runAgentDriverEpisode,
+} from '@yugao-gaos/turn-based-grid-sdk/agent';
+
+const driver = createKeyedAgentDriver('anthropic', {
+  apiKey: process.env.ANTHROPIC_API_KEY!,
+  model: 'your-model-id',
+});
+
+const registry = new AgentDriverRegistry([driver]);
+const result = await runAgentDriverEpisode(
+  environment,
+  registry.require('anthropic'),
+  { guidance: ['Prefer the shortest winning route.'] },
+);
+```
+
+Built-in keyed providers are Anthropic, OpenAI, xAI, and OpenRouter. The
+OpenAI-compatible driver also accepts a custom base URL and headers. Provider
+registries can add or replace definitions without changing the episode loop.
+Provider calls use `fetch`, so tests can inject an offline implementation.
+
+Model responses are parsed into the same `GridSubmittedAction` contract and
+must exactly match a concrete legal action before the reducer sees them. API
+keys are held only by driver instances, are redacted from request failures,
+and are not written to transcripts.
+
+## Installed agent CLIs
+
+The Node-only `./agent-cli` subpath owns reusable recipes for MCP-capable agent
+CLIs:
+
+- Claude Code
+- Codex CLI
+- Cursor CLI
+- Grok CLI
+- OpenCode CLI
+
+It can resolve executables, run non-token-consuming auth probes, build MCP
+configuration, parse transcript streams, and spawn each CLI in a temporary
+working directory. Product code supplies the MCP URL, prompt, server name,
+and allowed tool names:
+
+```ts
+import {
+  createDefaultCliAgentRegistry,
+  inspectCliAgent,
+  spawnCliAgent,
+} from '@yugao-gaos/turn-based-grid-sdk/agent-cli';
+
+const spec = createDefaultCliAgentRegistry().require('codex');
+console.log(await inspectCliAgent(spec));
+
+const process = spawnCliAgent(spec, {
+  mcpUrl: 'http://127.0.0.1:9000/mcp',
+  prompt: 'Complete this environment using observe and act.',
+  serverName: 'game',
+  toolNames: ['observe', 'act'],
+});
+
+const exit = await process.completion;
+```
+
+CLI configuration files are restricted to the temporary directory and are
+removed after exit. A caller can register another `CliAgentSpec`, or set
+`GAOS_AGENT_CLIS` to a JSON object with this shape:
+
+```json
+{
+  "my-agent": {
+    "label": "My Agent",
+    "bin": "my-agent",
+    "args": ["--mcp", "{mcpUrl}", "--prompt", "{prompt}"],
+    "files": { ".agent/config.json": "{\"server\":\"{serverName}\"}" }
+  }
+}
+```
+
+Supported placeholders are `{mcpUrl}`, `{prompt}`, `{serverName}`, and
+`{allowedTools}`.
+
+## `gaos-agent` executable
+
+The npm package installs `gaos-agent`:
+
+```sh
+# Discover and inspect integrations.
+gaos-agent drivers
+gaos-agent status codex
+
+# Validate a key without making a model call.
+export OPENAI_API_KEY=...
+gaos-agent check openai
+
+# Run a keyed episode. The module exports createEnvironment({ seed }).
+gaos-agent run openai \
+  --module ./environment.mjs \
+  --model your-model-id \
+  --seed 42
+
+# Launch an already-authenticated CLI against any product-owned MCP server.
+gaos-agent spawn codex \
+  --mcp-url http://127.0.0.1:9000/mcp \
+  --prompt "Complete the episode" \
+  --tools observe,act
+```
+
+Keys are read only from `ANTHROPIC_API_KEY`, `OPENAI_API_KEY`, `XAI_API_KEY`,
+or `OPENROUTER_API_KEY`. The command intentionally has no API-key argument.
+An environment module is ordinary ESM:
+
+```js
+import { AgentEnvironment } from '@yugao-gaos/turn-based-grid-sdk/engine';
+import { level, reducer } from './my-game.js';
+
+export function createEnvironment({ seed }) {
+  return new AgentEnvironment({ reducer, level, seed });
+}
+```
+
 ## Python
 
 `ArenaEnv` is Gym-style and now exposes `action_definitions` plus
@@ -91,6 +221,8 @@ current observation.
 
 ## Product boundary
 
-The SDK owns the agent loop and deterministic interfaces. Products retain
-their levels, characters, abilities, objectives, rewards, hosted session
-policy, anti-cheat rules, authentication, and leaderboards.
+The SDK owns the agent loop, driver contracts, provider transport, CLI launch
+mechanics, and deterministic interfaces. Products retain their prompts,
+levels, characters, abilities, objectives, reward policy, hosted session
+policy, coach rooms, human takeover, anti-cheat rules, authentication, and
+leaderboards.
