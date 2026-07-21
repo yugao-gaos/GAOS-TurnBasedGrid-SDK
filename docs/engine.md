@@ -25,6 +25,8 @@ The SDK owns deterministic, product-neutral behavior:
 - latching and automatic gate transitions, including occupancy-safe closing;
 - authored-order one-shot triggers with product-owned conditions and effects;
 - ordered ray traversal with product-owned collision and terminal policy;
+- selector/condition/leaf behavior-tree evaluation over product-owned node
+  schemas, conditions, actions, and world state;
 - ordered arrival-rule dispatch, neutral multi-resource claim arbitration,
   directed transport proposals/runs, connected link sources, and bounded
   transport/state interlocks;
@@ -66,6 +68,7 @@ import {
   advancePathProjectiles,
   arbitrateResourceClaims,
   commitPushChain,
+  evaluateBehaviorTree,
   planPushChain,
   proposeDirectedTransport,
   resolveArrival,
@@ -98,6 +101,31 @@ evaluation, latch persistence, effect application, and presentation payloads.
 numbers steps from one, and distinguishes a callback-requested stop from path
 exhaustion. Products retain blocker lookup, collision, damage, mutation, and
 presentation policy.
+
+Behavior trees use a typed adapter so the SDK never owns product node types or
+actions:
+
+```ts
+const order = evaluateBehaviorTree(context, productTree, {
+  inspect(node) {
+    if ('sel' in node) return { kind: 'selector', children: node.sel };
+    if ('if' in node) {
+      return {
+        kind: 'condition', condition: node.if,
+        then: node.then, else: node.else,
+      };
+    }
+    return { kind: 'leaf' };
+  },
+  test: (ctx, condition) => productConditionHolds(ctx, condition),
+  evaluateLeaf: (ctx, node) => productActionFor(ctx, node),
+});
+```
+
+Selectors return the first non-null result. A condition evaluates only its
+chosen branch, and returns null when false without an else branch. Products
+retain target selection, order reuse, behavior composition, spawning, and all
+world/entity rules.
 
 ## Reducer adapter
 
