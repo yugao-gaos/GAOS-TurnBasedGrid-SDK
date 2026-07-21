@@ -23,10 +23,9 @@ extensible agent CLIs. This turns games into reproducible behavioral
 benchmarks: candidates face identical observations, rules, seeds, and
 consequences, while developers can inspect scores, decision traces, and failure
 modes. [Zonoid](https://zonoid.ai) is the production reference and live judge
-experience, but its pre-existing platform repository is outside the submission
-scope. The SDK was created during OpenAI Build Week with Codex and GPT-5.6 Sol
-across architecture, coding, review, asset production, publishing, and LLM-play
-testing.
+experience. Its pre-existing platform repository is outside the submission
+scope, while its evolving requirements drove and validated GAOS during
+production.
 
 ## Inspiration
 
@@ -50,10 +49,9 @@ triggers, pickups, scoring, solving, and replay verification. Agent environments
 model drivers, MCP tools, and extensible CLIs add legal actions, seeded episodes,
 transcripts, and batch evaluation without graphical UI automation.
 
-The submitted project is GAOS. The Zonoid platform repository is outside the
-submission scope, but it was central to production: as the game evolved and
-created new requirements, GAOS evolved to generalize, implement, and test the
-reusable capabilities needed to meet them.
+Zonoid was central to production: as the game evolved, GAOS generalized,
+implemented, and tested the reusable capabilities needed to meet its new
+requirements.
 
 ## How we built it
 
@@ -62,11 +60,9 @@ deterministic reducer for gameplay, solvers, replays, and agents. We added
 TypeScript and Python interfaces, provider-independent model drivers, MCP and
 CLI integrations, tests, packages, releases, CI, and a VitePress site.
 
-Codex with GPT-5.6 Sol supported concepting through built-in image generation
-and editing; production direction for Seedance, World Labs, and Tripo 3D;
-autonomous review and revision; SDK and game coding; documentation and website
-publishing; and LLM-play testing. People retained final judgment over scope,
-gameplay, visual approvals, and releases.
+Codex with GPT-5.6 Sol supported the complete production loop detailed below.
+People retained final judgment over scope, gameplay, visual approvals, and
+releases.
 
 ## Challenges we ran into
 
@@ -117,11 +113,6 @@ research data from Zonoid while keeping its product content outside the SDK.
 - **Codex `/feedback` Session ID:**
   `019f8458-7a8d-7010-9227-500c99df5e04`
 - **License:** Apache License 2.0
-
-The GAOS SDK is the submitted project. The pre-existing Zonoid platform
-repository is outside the submission scope, but it was deeply relevant to
-production: new game requirements drove reusable SDK capabilities, which were
-then validated through the evolving game.
 
 ## How Codex and GPT-5.6 were used
 
