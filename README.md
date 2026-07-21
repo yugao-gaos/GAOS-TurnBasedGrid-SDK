@@ -7,8 +7,8 @@ repository contains three layers:
 - a genre-neutral v1 turn envelope, cursor, retry, and simultaneous-intent
   protocol; and
 - Arena-specific clients and observation types for the hosted grid game; and
-- reusable grid mechanics, scoring, shortest-path solving, and replay
-  verification through the `./engine` package subpath.
+- reusable movement, pathfinding, sight geometry, scoring, shortest-path
+  solving, and replay verification through the `./engine` package subpath.
 
 Product content and policy are not included. Zonoid characters and abilities,
 campaign game types, authored levels, and seasonal/server rules stay in the
