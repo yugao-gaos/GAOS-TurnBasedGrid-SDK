@@ -94,6 +94,7 @@ describe('keyed providers', () => {
       observation: reducer.view(reducer.init({ goal: 2 }, 1)),
       legalActions: [{ id: 'advance' }],
       step: 0,
+      systemPrompt: 'Product rule: avoid hazards.',
     });
     expect(decision).toMatchObject({
       action: { id: 'advance' },
@@ -103,7 +104,12 @@ describe('keyed providers', () => {
     expect(request).toHaveBeenCalledWith('https://api.openai.com/v1/chat/completions', expect.objectContaining({
       method: 'POST',
       headers: expect.objectContaining({ authorization: 'Bearer secret-key' }),
+      body: expect.stringContaining('Product rule: avoid hazards.'),
     }));
+    const requestBody = JSON.parse(request.mock.calls[0]![1]!.body as string) as {
+      messages: Array<{ role: string; content: string }>;
+    };
+    expect(requestBody.messages[0]?.content).toContain('Choose exactly one entry from legalActions.');
 
     request.mockResolvedValueOnce(new Response(JSON.stringify({
       choices: [{ message: { content: '{"action":{"id":"jump","index":9}}' } }],
@@ -148,4 +154,3 @@ describe('keyed providers', () => {
     })).resolves.toEqual({ ok: false, detail: 'Error: request [redacted] rejected' });
   });
 });
-

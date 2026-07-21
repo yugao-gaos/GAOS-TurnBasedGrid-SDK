@@ -162,6 +162,15 @@ export function formatAgentContext<TObservation>(context: AgentDriverContext<TOb
   });
 }
 
+function systemPrompt<TObservation>(
+  options: KeyedAgentDriverOptions,
+  context: AgentDriverContext<TObservation>,
+): string {
+  return [options.systemPrompt, context.systemPrompt, DEFAULT_SYSTEM_PROMPT]
+    .filter((part): part is string => typeof part === 'string' && part.trim().length > 0)
+    .join('\n\n');
+}
+
 function secretSafeError(message: string, apiKey: string): Error {
   return new Error(apiKey ? message.split(apiKey).join('[redacted]') : message);
 }
@@ -224,7 +233,7 @@ export class OpenAICompatibleAgentDriver<TObservation = unknown> implements Agen
         model: this.model,
         max_tokens: this.maxTokens,
         messages: [
-          { role: 'system', content: context.systemPrompt ?? this.options.systemPrompt ?? DEFAULT_SYSTEM_PROMPT },
+          { role: 'system', content: systemPrompt(this.options, context) },
           { role: 'user', content: formatAgentContext(context) },
         ],
       }),
@@ -282,7 +291,7 @@ export class AnthropicAgentDriver<TObservation = unknown> implements AgentDriver
       body: JSON.stringify({
         model: this.model,
         max_tokens: this.maxTokens,
-        system: context.systemPrompt ?? this.options.systemPrompt ?? DEFAULT_SYSTEM_PROMPT,
+        system: systemPrompt(this.options, context),
         messages: [{ role: 'user', content: formatAgentContext(context) }],
       }),
     });
@@ -415,4 +424,3 @@ export function createKeyedAgentDriver<TObservation = unknown>(
 ): AgentDriver<TObservation> {
   return registry.require(providerId).createDriver<TObservation>(options);
 }
-
