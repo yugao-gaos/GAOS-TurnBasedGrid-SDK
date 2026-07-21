@@ -21,116 +21,89 @@ and replay verification—with an AI-native runtime for concrete legal actions,
 seeded episodes, transcripts, batch evaluation, model drivers, MCP tools, and
 extensible agent CLIs. This turns games into reproducible behavioral
 benchmarks: candidates face identical observations, rules, seeds, and
-consequences, while developers can inspect not only scores but decision traces
-and failure modes. [Zonoid](https://zonoid.ai) is the first game built with GAOS
-and provides the live judge experience. The SDK was created during OpenAI Build
-Week with Codex and GPT-5.6 Sol, which helped design the architecture,
-implement and review code, generate and revise production assets, publish
-documentation and releases, and test the game through LLM play.
+consequences, while developers can inspect scores, decision traces, and failure
+modes. [Zonoid](https://zonoid.ai) is the production reference and live judge
+experience, but its pre-existing platform repository is outside the submission
+scope. The SDK was created during OpenAI Build Week with Codex and GPT-5.6 Sol
+across architecture, coding, review, asset production, publishing, and LLM-play
+testing.
 
 ## Inspiration
 
-Most AI benchmarks measure whether a model can produce a correct answer once.
-We wanted to measure whether an agent can keep making coherent decisions as a
-world changes around it: planning ahead, adapting to other players, recovering
-from mistakes, and living with the consequences of earlier actions. Games make
-that behavior observable through shared rules, repeatable scenarios, scores,
-and complete decision traces.
+Most AI benchmarks test one answer. We wanted to test sustained behavior:
+planning, adapting, recovering from mistakes, and handling consequences. Games
+make that measurable through shared rules, repeatable scenarios, scores, and
+complete decision traces.
 
-A simultaneous turn-based grid is especially useful for this purpose. Humans
-and agents receive the same state and action window, so reaction speed, network
-latency, and request order do not decide the outcome. Every turn instead tests
-prediction, spatial reasoning, coordination, and opponent modeling. Zonoid
-Labs AGI Arena began as the game built around that idea; GAOS emerged when we
-separated its reusable mechanics and agent interface from its product-specific
-characters, levels, and live service.
+Simultaneous turn-based grids give humans and agents the same state and action
+window, removing reaction speed, network latency, and request order from the
+contest. Each turn instead tests prediction, spatial reasoning, coordination,
+and opponent modeling. GAOS grew from this idea while building Zonoid Labs AGI
+Arena.
 
 ## What it does
 
-GAOS is an open-source toolkit for building deterministic, simultaneous
-turn-based grid games that humans and AI agents can play through the same
-authoritative engine. Its TypeScript core provides movement, recursive
-multi-wave turn settlement, pathfinding and field of view, push chains,
-projectiles, transport, gates, triggers, pickups, scoring, solving, and replay
-verification. Its protocol, agent environment, model drivers, MCP tools, and
-extensible CLIs expose concrete legal actions, seeded episodes, transcripts,
-and batch evaluation without requiring agents to automate a graphical UI.
+GAOS is an open-source TypeScript and Python toolkit for deterministic,
+simultaneous turn-based grid games. One authoritative engine provides movement,
+recursive settlement, pathfinding, FOV, pushing, projectiles, transport, gates,
+triggers, pickups, scoring, solving, and replay verification. Agent environments,
+model drivers, MCP tools, and extensible CLIs add legal actions, seeded episodes,
+transcripts, and batch evaluation without graphical UI automation.
 
-Zonoid Labs AGI Arena is the first game built with GAOS and the live reference
-experience for judges. The submitted project is the GAOS SDK; the pre-existing
-Zonoid platform repository is outside the submission scope.
+The submitted project is GAOS. The Zonoid platform repository is outside the
+submission scope, but it was central to production: as the game evolved and
+created new requirements, GAOS evolved to generalize, implement, and test the
+reusable capabilities needed to meet them.
 
 ## How we built it
 
-We identified the product-neutral rules inside Zonoid and extracted them into
-a standalone Apache-2.0 SDK. We built one deterministic reducer for gameplay,
-solvers, replay verification, and agent play, then added TypeScript and Python
-interfaces, provider-independent model drivers, MCP tools, CLI integrations,
-tests, packaging, GitHub Actions, releases, and a VitePress documentation site.
+We extracted Zonoid's product-neutral rules into an Apache-2.0 SDK and built one
+deterministic reducer for gameplay, solvers, replays, and agents. We added
+TypeScript and Python interfaces, provider-independent model drivers, MCP and
+CLI integrations, tests, packages, releases, CI, and a VitePress site.
 
-Codex with GPT-5.6 Sol supported the entire production loop. Its built-in image
-generation and editing helped develop the visual concepts. GPT then helped turn
-approved concept images into production prompts and direction for Seedance
-video, World Labs worlds, and Tripo 3D models. It autonomously reviewed and
-revised outputs, coded both the SDK and game, created online documentation and
-presentation sites, and tested the product through LLM play. Human direction
-remained responsible for product scope, gameplay semantics, visual approvals,
-and release decisions.
+Codex with GPT-5.6 Sol supported concepting through built-in image generation
+and editing; production direction for Seedance, World Labs, and Tripo 3D;
+autonomous review and revision; SDK and game coding; documentation and website
+publishing; and LLM-play testing. People retained final judgment over scope,
+gameplay, visual approvals, and releases.
 
 ## Challenges we ran into
 
-The hardest architectural problem was finding the correct boundary: reusable
-grid mechanics, settlement, scoring, solving, and agent contracts belong in
-the SDK, while Zonoid-specific characters, abilities, campaigns, authored
-levels, and seasonal rules belong in the product.
-
-Turn resolution also could not be treated as a single pass. One movement can
-cause a collision, pickup, switch press, gate update, transport, or another
-movement, so settlement must advance through deterministic waves until the
-state becomes quiet. We had to define snapshot qualification, collision and
-resource-claim ordering, stable identities, and next-turn deferral carefully
-enough that a renderer, server, solver, replay verifier, and agent all reach
-the same result. A further challenge was making model and CLI integrations easy
-to extend without coupling the engine to one AI provider.
+The first challenge was the SDK boundary: reusable mechanics, settlement,
+scoring, solving, and agent contracts belong in GAOS; Zonoid-specific
+characters, campaigns, levels, and seasonal rules do not. The second was
+recursive resolution. A move can trigger collisions, pickups, switches, gates,
+transport, or more movement, so deterministic settlement must continue in
+ordered waves until the state is quiet. We also had to keep model and CLI
+extensions provider-neutral.
 
 ## Accomplishments that we're proud of
 
-We shipped a public Apache-2.0 repository, a documented v0.9.1 release with
-prebuilt npm and Python packages, and a working deterministic engine backed by
-98 TypeScript tests and 13 Python tests. GAOS now has detailed pages for every
-mechanism, a protocol and agent runtime designed together with the engine,
-replayable transcripts, solver and scoring support, MCP tools, and extensible
-keyed-provider and CLI drivers.
-
-The accomplishment that matters most is architectural: humans, agents,
-solvers, replays, and the live Zonoid game can all rely on the same
-authoritative reducer. Agent support is therefore part of the game contract,
-not an automation layer added after the game was finished.
+We shipped a public Apache-2.0 repository, a documented v0.9.1 release, prebuilt
+npm and Python packages, detailed mechanism pages, replayable transcripts,
+solver and scoring support, MCP tools, and extensible model and CLI drivers. Its
+deterministic engine is backed by 98 TypeScript and 13 Python tests. Most
+importantly, humans, agents, solvers, replays, and Zonoid share one authoritative
+reducer—agent support is part of the game contract, not a later automation layer.
 
 ## What we learned
 
-An AI-native game must begin with a clear state-and-action contract rather than
-screen automation. Determinism requires more than removing randomness: event
-ordering, stable IDs, seeds, protocol versions, and recursive effects must all
-be explicit. Simultaneous turns proved valuable because they preserve strategic
-interaction while making comparisons fairer and easier to reproduce.
-
-We also learned that extracting an SDK improves both sides of the boundary. The
-game can focus on authored experiences while the reusable engine becomes easier
-to test, document, and extend. Codex and GPT-5.6 were most effective when they
-could work across concepting, implementation, review, publishing, and agent-play
-testing while people retained final judgment over intent and release quality.
+AI-native games need a clear state-and-action contract, not screen automation.
+Determinism also requires explicit ordering, IDs, seeds, versions, and recursive
+effects—not simply removing randomness. Separating the SDK lets Zonoid focus on
+authored experiences while GAOS becomes easier to test and extend. The two
+projects improve each other through a continuous requirements-and-validation
+loop.
 
 ## What's next for Zonoid Labs AGI Arena
 
-We will open registration and prebuilt downloads so judges and public players
-can experience the live game directly. We plan to expand the held-out task
-suites, seeds, multiplayer evaluations, and leaderboards; report richer
-behavioral measures such as consistency, invalid-action rate, efficiency,
-recovery, and failure modes; and add more reference games, mechanisms, adapters,
-and CLI providers. In parallel, we will stabilize GAOS toward 1.0 and invite
-community contributions while keeping Zonoid's product content separate from
-the open SDK.
+We will open registration and downloads, expand held-out tasks, multiplayer
+evaluation, and leaderboards, and report richer measures such as consistency,
+efficiency, recovery, and failure modes. As Zonoid introduces new gameplay and
+research needs, reusable solutions will continue to strengthen GAOS. We will
+also move the SDK toward 1.0, welcome community contributions, and publish
+research data from Zonoid while keeping its product content outside the SDK.
 
 ## Required URLs and identifiers
 
@@ -146,8 +119,9 @@ the open SDK.
 - **License:** Apache License 2.0
 
 The GAOS SDK is the submitted project. The pre-existing Zonoid platform
-repository is outside the submission scope; Zonoid is the first hosted game
-built with GAOS and the judge-facing demonstration.
+repository is outside the submission scope, but it was deeply relevant to
+production: new game requirements drove reusable SDK capabilities, which were
+then validated through the evolving game.
 
 ## How Codex and GPT-5.6 were used
 
