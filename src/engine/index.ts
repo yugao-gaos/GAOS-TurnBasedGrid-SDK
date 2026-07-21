@@ -54,6 +54,11 @@ export {
   type LatchedTriggerOptions,
 } from './triggers.js';
 export {
+  traverseGridRay,
+  type GridRayDirective,
+  type GridRayResult,
+} from './rays.js';
+export {
   arbitrateResourceClaims,
   type ResourceArbitration,
   type ResourceClaim,

@@ -24,6 +24,7 @@ The SDK owns deterministic, product-neutral behavior:
   passes, and all-or-nothing push-chain planning/commit ordering;
 - latching and automatic gate transitions, including occupancy-safe closing;
 - authored-order one-shot triggers with product-owned conditions and effects;
+- ordered ray traversal with product-owned collision and terminal policy;
 - ordered arrival-rule dispatch, neutral multi-resource claim arbitration,
   directed transport proposals/runs, connected link sources, and bounded
   transport/state interlocks;
@@ -74,6 +75,7 @@ import {
   resolveInterlock,
   resolveLatchedTriggers,
   resolveTransportRun,
+  traverseGridRay,
 } from '@yugao-gaos/turn-based-grid-sdk/engine';
 ```
 
@@ -92,6 +94,10 @@ Gate transitions accept only abstract open/closed state, activation, and
 occupancy; products retain their source lookup, board tokens, and visual events.
 Latched triggers similarly retain authored order while products provide condition
 evaluation, latch persistence, effect application, and presentation payloads.
+`traverseGridRay` visits a supplied finite or open-ended cell iterable in order,
+numbers steps from one, and distinguishes a callback-requested stop from path
+exhaustion. Products retain blocker lookup, collision, damage, mutation, and
+presentation policy.
 
 ## Reducer adapter
 
