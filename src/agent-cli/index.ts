@@ -1,5 +1,6 @@
 export {
   DEFAULT_CLAUDE_CLI_MODEL,
+  DEFAULT_OLLAMA_CLI_MODEL,
   CliAgentRegistry,
   createBuiltinCliAgents,
   createDefaultCliAgentRegistry,

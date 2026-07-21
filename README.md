@@ -15,8 +15,8 @@ repository contains six layers:
   definitions; and
 - extensible keyed-model drivers for Anthropic, OpenAI, xAI, and OpenRouter;
   and
-- reusable launch recipes and a standalone CLI for Claude Code, Codex, Cursor,
-  Grok, OpenCode, and declarative custom agents.
+- reusable launch recipes and a standalone CLI for Claude Code, Ollama-backed
+  Claude Code, Codex, Cursor, Grok, OpenCode, and declarative custom agents.
 
 Product content and policy are not included. Zonoid characters and abilities,
 campaign game types, authored levels, and seasonal/server rules stay in the
@@ -40,7 +40,7 @@ Repositories with GitHub access can instead pin an exact release tag without
 configuring the npm registry:
 
 ```sh
-npm install 'git+https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK.git#v0.5.1'
+npm install 'git+https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK.git#v0.6.0'
 ```
 
 Use the hosted Arena client:
@@ -127,6 +127,7 @@ gaos-agent drivers
 gaos-agent check openai
 gaos-agent run openai --module ./environment.mjs --model your-model-id
 gaos-agent spawn codex --mcp-url http://127.0.0.1:9000/mcp --prompt "Complete the episode"
+OLLAMA_MODEL=qwen3.5 gaos-agent spawn ollama --mcp-url http://127.0.0.1:9000/mcp --prompt "Complete the episode"
 ```
 
 Node applications can import CLI launch/status APIs from the `./agent-cli`
@@ -140,7 +141,7 @@ The distribution is named `gaos-turn-based-grid-sdk`; the stable import name
 remains `agilabs_arena` for compatibility with existing integrations.
 
 ```sh
-pip install gaos_turn_based_grid_sdk-0.5.1-py3-none-any.whl
+pip install gaos_turn_based_grid_sdk-0.6.0-py3-none-any.whl
 ```
 
 ```python

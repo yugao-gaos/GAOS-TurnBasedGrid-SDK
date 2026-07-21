@@ -42,6 +42,7 @@ OPENROUTER_API_KEY. They are never accepted as command arguments.
 
 Custom CLI recipes can be supplied through GAOS_AGENT_CLIS as documented by
 customCliAgentsFromJson in @yugao-gaos/turn-based-grid-sdk/agent-cli.
+OLLAMA_MODEL selects the model used by the built-in Ollama recipe (default: qwen3.5).
 `;
 
 function parseArguments(args: readonly string[]): ParsedArguments {
@@ -94,7 +95,10 @@ function defaultIo(): AgentCliIO {
 }
 
 function cliRegistry(env: NodeJS.ProcessEnv) {
-  return createDefaultCliAgentRegistry({ customAgentsJson: env.GAOS_AGENT_CLIS });
+  return createDefaultCliAgentRegistry({
+    customAgentsJson: env.GAOS_AGENT_CLIS,
+    ollamaModel: env.OLLAMA_MODEL,
+  });
 }
 
 async function listDrivers(io: AgentCliIO): Promise<number> {
