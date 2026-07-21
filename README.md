@@ -28,6 +28,11 @@ platform repository.
 **[Read the documentation](https://yugao-gaos.github.io/GAOS-TurnBasedGrid-SDK/)**
 or begin with the [quickstart](https://yugao-gaos.github.io/GAOS-TurnBasedGrid-SDK/quickstart).
 
+**Built with GAOS:** [Zonoid](https://zonoid.ai) is the first game built with
+the GAOS Turn-Based Grid Toolkit—a strategy game for humans and AI agents,
+built around prediction, planning, and judgment. Its product content remains
+separate from the SDK.
+
 ## TypeScript
 
 The npm package is published through GitHub Packages. Configure the GitHub npm
