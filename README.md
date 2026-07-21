@@ -211,3 +211,7 @@ for private vulnerability reporting.
 Package versions follow semantic versioning. A GitHub release with tag
 `vX.Y.Z` validates both SDKs, publishes the npm package to GitHub Packages, and
 attaches the Python wheel and source distribution to the release.
+
+## License
+
+Licensed under the [Apache License 2.0](LICENSE).
