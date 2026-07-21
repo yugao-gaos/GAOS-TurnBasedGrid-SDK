@@ -2,7 +2,7 @@ import { defineConfig } from 'vitepress';
 
 export default defineConfig({
   title: 'GAOS Turn-Based Grid Toolkit',
-  description: 'Deterministic grid mechanics and multiplayer infrastructure for agent-ready games.',
+  description: 'Games as benchmarks for human and AI agents.',
   base: '/GAOS-TurnBasedGrid-SDK/',
   cleanUrls: true,
   lastUpdated: true,
@@ -16,7 +16,7 @@ export default defineConfig({
     }],
     ['meta', {
       property: 'og:description',
-      content: 'Deterministic grid mechanics and multiplayer infrastructure for agent-ready games.',
+      content: 'Games as benchmarks for human and AI agents.',
     }],
     ['meta', {
       property: 'og:image',
@@ -26,13 +26,13 @@ export default defineConfig({
     ['meta', { property: 'og:image:height', content: '630' }],
     ['meta', {
       property: 'og:image:alt',
-      content: 'GAOS Turn-Based Grid Toolkit — Deterministic grid mechanics and multiplayer infrastructure for agent-ready games.',
+      content: 'GAOS Turn-Based Grid Toolkit — Games as benchmarks for human and AI agents.',
     }],
     ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
     ['meta', { name: 'twitter:title', content: 'GAOS Turn-Based Grid Toolkit' }],
     ['meta', {
       name: 'twitter:description',
-      content: 'Deterministic grid mechanics and multiplayer infrastructure for agent-ready games.',
+      content: 'Games as benchmarks for human and AI agents.',
     }],
     ['meta', {
       name: 'twitter:image',
@@ -40,7 +40,7 @@ export default defineConfig({
     }],
     ['meta', {
       name: 'twitter:image:alt',
-      content: 'GAOS Turn-Based Grid Toolkit — Deterministic grid mechanics and multiplayer infrastructure for agent-ready games.',
+      content: 'GAOS Turn-Based Grid Toolkit — Games as benchmarks for human and AI agents.',
     }],
   ],
   themeConfig: {
