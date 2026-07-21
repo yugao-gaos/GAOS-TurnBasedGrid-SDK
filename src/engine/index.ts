@@ -37,6 +37,15 @@ export {
   type PushDestination,
 } from './push-chain.js';
 export {
+  resolveArrival,
+  type ArrivalRule,
+} from './arrival.js';
+export {
+  arbitrateResourceClaims,
+  type ResourceArbitration,
+  type ResourceClaim,
+} from './resource-claims.js';
+export {
   fnv1a,
   mulberry32,
   roll,
