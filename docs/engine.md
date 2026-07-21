@@ -24,6 +24,8 @@ The SDK owns deterministic, product-neutral behavior:
 - star scoring and Energy/ActionBudget failure ordering;
 - breadth-first minimum-action solving over an injected deterministic reducer;
 - transcript re-simulation and deterministic per-level run seeds.
+- provider-neutral agent episode lifecycle, concrete action validation,
+  rewards, safety truncation, transcripts, and batch evaluation.
 
 The product owns content and policy:
 
@@ -55,6 +57,10 @@ interface GridReducer<TLevel, TState> {
 
 This keeps campaign lookup, level schemas, and character catalogs outside the
 SDK while allowing the reusable algorithms to execute the product reducer.
+
+The same reducer adapter powers `AgentEnvironment`. A product therefore needs
+no second gameplay implementation for local agents, hosted sessions, solving,
+or deterministic replay.
 
 ## Scoring configuration
 
