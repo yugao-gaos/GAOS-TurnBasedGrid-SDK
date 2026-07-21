@@ -36,6 +36,9 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "prepare": "npm run build",
@@ -55,6 +58,7 @@
   "devDependencies": {
     "@types/node": "^22.20.1",
     "typescript": "^5.5.4",
+    "vitepress": "1.6.4",
     "vitest": "^3.2.7"
   }
 }
