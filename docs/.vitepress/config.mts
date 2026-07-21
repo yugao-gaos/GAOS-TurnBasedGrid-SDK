@@ -46,6 +46,7 @@ export default defineConfig({
   themeConfig: {
     siteTitle: 'GAOS Turn-Based Grid Toolkit',
     nav: [
+      { text: 'Mission', link: '/mission' },
       { text: 'Guide', link: '/quickstart' },
       { text: 'Mechanisms', link: '/mechanisms/' },
       { text: 'Agentic play', link: '/agentic-play' },
@@ -57,6 +58,7 @@ export default defineConfig({
       {
         text: 'Start here',
         items: [
+          { text: 'Mission and benchmark thesis', link: '/mission' },
           { text: 'Quickstart', link: '/quickstart' },
           { text: 'Architecture map', link: '/architecture' },
         ],
