@@ -1,6 +1,6 @@
 # GAOS Turn-Based Grid Toolkit
 
-GAOS stands for **Game Agentic Open SDK**.
+GAOS stands for **Game AGI Open SDK**.
 
 **Deterministic grid mechanics and multiplayer infrastructure for agent-ready
 games.**
