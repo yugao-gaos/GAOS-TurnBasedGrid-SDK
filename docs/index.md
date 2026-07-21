@@ -51,6 +51,8 @@ Product reducer + authored content
   <p><strong><a href="https://zonoid.ai">Visit Zonoid →</a></strong></p>
 </div>
 
+[How we built GAOS and Zonoid with GPT-5.6 Sol →](/building-with-gpt-5-6-sol)
+
 ## A deliberate ownership boundary
 
 <div class="ownership-grid">

@@ -35,6 +35,10 @@ the GAOS Turn-Based Grid Toolkit—a strategy game for humans and AI agents,
 built around prediction, planning, and judgment. Its product content remains
 separate from the SDK.
 
+[Read how we built GAOS and Zonoid with GPT-5.6 Sol](docs/building-with-gpt-5-6-sol.md),
+from concepting and specialist asset production through engineering,
+publishing, and model-play testing.
+
 ## TypeScript
 
 The npm package is published through GitHub Packages. Configure the GitHub npm
