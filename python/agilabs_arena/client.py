@@ -104,6 +104,8 @@ class Turn:
     targetable_cells: list[list[int]] = field(default_factory=list)
     action_targeting: dict[str, Any] = field(default_factory=dict)
     dialogue_options: list[dict[str, Any]] = field(default_factory=list)
+    items: list[dict[str, Any]] = field(default_factory=list)
+    pois: list[dict[str, Any]] = field(default_factory=list)
     talking_to: dict[str, Any] | None = None
     dialogue_speaker: str | None = None
     dialogue_emotion: str | None = None
@@ -130,6 +132,8 @@ class Turn:
             targetable_cells=hud.get("targetableCells", []),
             action_targeting=hud.get("actionTargeting", {}),
             dialogue_options=hud.get("dialogueOptions", []),
+            items=hud.get("items", []),
+            pois=hud.get("pois", []),
             talking_to=hud.get("talkingTo"),
             dialogue_speaker=hud.get("dialogueSpeaker"),
             dialogue_emotion=hud.get("dialogueEmotion"),

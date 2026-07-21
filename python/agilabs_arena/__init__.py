@@ -11,6 +11,14 @@ from .client import (
     parse_turn_result,
 )
 from .env import ArenaEnv
+from .agent import (
+    AgentBatchResult,
+    AgentEnvironment,
+    AgentEpisodeResult,
+    AgentStep,
+    evaluate_agent_episodes,
+    run_agent_episode,
+)
 
 __all__ = [
     "PROTOCOL_ID",
@@ -19,6 +27,12 @@ __all__ = [
     "PARTICIPANT_ID_PATTERN",
     "ArenaClient",
     "ArenaEnv",
+    "AgentEnvironment",
+    "AgentStep",
+    "AgentEpisodeResult",
+    "AgentBatchResult",
+    "run_agent_episode",
+    "evaluate_agent_episodes",
     "ArenaAPIError",
     "IllegalActionRejected",
     "ProtocolMismatchError",

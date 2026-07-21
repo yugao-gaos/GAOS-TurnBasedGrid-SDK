@@ -49,14 +49,20 @@ class ArenaEnv:
 
     def step(
         self,
-        action: int | str,
+        action: int | str | dict[str, Any],
         x: int | None = None,
         y: int | None = None,
         index: int | None = None,
     ) -> tuple[dict[str, Any], float, bool, bool, dict[str, Any]]:
         if self.session_id is None or self._turn is None:
             raise RuntimeError("call reset() before step()")
-        action_id = self._resolve(action)
+        if isinstance(action, dict):
+            action_id = self._resolve(action.get("id", ""))
+            x = action.get("x", x)
+            y = action.get("y", y)
+            index = action.get("index", index)
+        else:
+            action_id = self._resolve(action)
         turn = self.client.submit_action(self.session_id, action_id, x=x, y=y, index=index)
         self._turn = turn
         terminated = turn.done
@@ -94,6 +100,8 @@ class ArenaEnv:
             "grid": turn.grid,
             "narrative": turn.narrative,
             "legal_actions": turn.legal_action_ids,
+            "action_definitions": turn.actions,
+            "concrete_actions": ArenaEnv._concrete_actions(turn),
             "carrying": turn.carrying,
             "energy_left": turn.max_actions - turn.actions_used,
             "control_revision": turn.control_revision,
@@ -105,6 +113,33 @@ class ArenaEnv:
             "dialogue_speaker": turn.dialogue_speaker,
             "dialogue_emotion": turn.dialogue_emotion,
         }
+
+    @staticmethod
+    def _concrete_actions(turn: Turn) -> list[dict[str, Any]]:
+        concrete: list[dict[str, Any]] = []
+        for definition in turn.actions:
+            action_id = definition.get("id")
+            params = definition.get("params")
+            if not isinstance(action_id, str):
+                continue
+            if params == "none":
+                concrete.append({"id": action_id})
+            elif params == "index":
+                indices = {
+                    item["index"]
+                    for item in [*turn.items, *turn.dialogue_options, *turn.pois]
+                    if isinstance(item.get("index"), int)
+                }
+                concrete.extend({"id": action_id, "index": index} for index in sorted(indices))
+            elif params == "xy":
+                targeting = turn.action_targeting.get(action_id, {})
+                cells = targeting.get("targetableCells", turn.targetable_cells)
+                concrete.extend(
+                    {"id": action_id, "x": cell[0], "y": cell[1]}
+                    for cell in cells
+                    if isinstance(cell, list) and len(cell) == 2
+                )
+        return concrete
 
     @staticmethod
     def _info(turn: Turn) -> dict[str, Any]:
