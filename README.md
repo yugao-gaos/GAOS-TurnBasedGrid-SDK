@@ -7,8 +7,8 @@ repository contains three layers:
 - a genre-neutral v1 turn envelope, cursor, retry, and simultaneous-intent
   protocol; and
 - Arena-specific clients and observation types for the hosted grid game; and
-- reusable grid mechanics, scoring, shortest-path solving, and replay
-  verification through the `./engine` package subpath.
+- reusable movement, pathfinding, sight geometry, scoring, shortest-path
+  solving, and replay verification through the `./engine` package subpath.
 
 Product content and policy are not included. Zonoid characters and abilities,
 campaign game types, authored levels, and seasonal/server rules stay in the
@@ -32,7 +32,7 @@ Repositories with GitHub access can instead pin an exact release tag without
 configuring the npm registry:
 
 ```sh
-npm install 'git+https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK.git#v0.2.0'
+npm install 'git+https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK.git#v0.3.0'
 ```
 
 Use the hosted Arena client:
@@ -83,7 +83,7 @@ The distribution is named `gaos-turn-based-grid-sdk`; the stable import name
 remains `agilabs_arena` for compatibility with existing integrations.
 
 ```sh
-pip install gaos_turn_based_grid_sdk-0.2.0-py3-none-any.whl
+pip install gaos_turn_based_grid_sdk-0.3.0-py3-none-any.whl
 ```
 
 ```python

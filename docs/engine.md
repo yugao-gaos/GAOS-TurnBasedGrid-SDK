@@ -18,6 +18,8 @@ The SDK owns deterministic, product-neutral behavior:
 
 - simultaneous movement collision resolution, including footprints, movement
   chains, rotations, swaps, and priority;
+- shortest cardinal pathfinding, Bresenham traversal, line-of-sight checks, and
+  widening cone geometry through injected board/blocker policies;
 - seeded random draws and permutations;
 - star scoring and Energy/ActionBudget failure ordering;
 - breadth-first minimum-action solving over an injected deterministic reducer;
@@ -33,6 +35,10 @@ The product owns content and policy:
 The dividing rule is: the SDK implements **how a reusable mechanism behaves**;
 the product decides **which content uses it, where it is enabled, and with what
 values**.
+
+Geometry APIs accept callbacks for cell existence and blocking. The SDK owns
+the algorithm; the product retains its terrain tokens, traversal capabilities,
+projectile collision effects, and visibility policy.
 
 ## Reducer adapter
 

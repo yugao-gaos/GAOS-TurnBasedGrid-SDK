@@ -36,3 +36,15 @@ export {
   type GridTranscriptAction,
   type GridTranscriptHeader,
 } from './replay.js';
+export {
+  CARDINAL_STEPS,
+  CARDINAL_VECTORS,
+  bresenhamLine,
+  coneFieldCells,
+  lineOfSightClear,
+  manhattanDistance,
+  shortestGridPath,
+  type CardinalDirection,
+  type ConeFieldOptions,
+  type ShortestGridPathOptions,
+} from './geometry.js';
