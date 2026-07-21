@@ -23,6 +23,7 @@ The SDK owns deterministic, product-neutral behavior:
 - breadth-first chain reactions, path-projectile advancement, bounded full-flight
   passes, and all-or-nothing push-chain planning/commit ordering;
 - latching and automatic gate transitions, including occupancy-safe closing;
+- authored-order one-shot triggers with product-owned conditions and effects;
 - ordered arrival-rule dispatch, neutral multi-resource claim arbitration,
   directed transport proposals/runs, connected link sources, and bounded
   transport/state interlocks;
@@ -71,6 +72,7 @@ import {
   resolveFlightPasses,
   resolveGateTransition,
   resolveInterlock,
+  resolveLatchedTriggers,
   resolveTransportRun,
 } from '@yugao-gaos/turn-based-grid-sdk/engine';
 ```
@@ -88,6 +90,8 @@ animation order. Transport similarly separates reusable directed proposals and
 bounded run/interlock behavior from product occupancy, power, and terrain rules.
 Gate transitions accept only abstract open/closed state, activation, and
 occupancy; products retain their source lookup, board tokens, and visual events.
+Latched triggers similarly retain authored order while products provide condition
+evaluation, latch persistence, effect application, and presentation payloads.
 
 ## Reducer adapter
 

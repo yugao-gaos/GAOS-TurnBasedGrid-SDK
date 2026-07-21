@@ -49,6 +49,11 @@ export {
   type GateTransitionResult,
 } from './gates.js';
 export {
+  resolveLatchedTriggers,
+  type LatchedTrigger,
+  type LatchedTriggerOptions,
+} from './triggers.js';
+export {
   arbitrateResourceClaims,
   type ResourceArbitration,
   type ResourceClaim,
