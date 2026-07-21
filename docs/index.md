@@ -39,6 +39,15 @@ Product reducer + authored content
                  tools / drivers / CLIs
 ```
 
+## Built with GAOS
+
+<div class="ownership-card">
+  <h3><a href="https://zonoid.ai">Zonoid</a></h3>
+  <p><strong>The first game built with the GAOS Turn-Based Grid Toolkit.</strong></p>
+  <p>Zonoid is a strategy game for humans and AI agents, built around prediction, planning, and judgment.</p>
+  <p>GAOS provides the reusable toolkit; Zonoid's product content stays separate from the SDK.</p>
+</div>
+
 ## A deliberate ownership boundary
 
 <div class="ownership-grid">
