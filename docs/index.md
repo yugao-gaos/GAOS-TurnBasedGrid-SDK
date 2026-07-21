@@ -46,6 +46,7 @@ Product reducer + authored content
   <p><strong>The first game built with the GAOS Turn-Based Grid Toolkit.</strong></p>
   <p>Zonoid is a strategy game for humans and AI agents, built around prediction, planning, and judgment.</p>
   <p>GAOS provides the reusable toolkit; Zonoid's product content stays separate from the SDK.</p>
+  <p><strong><a href="https://zonoid.ai">Visit Zonoid →</a></strong></p>
 </div>
 
 ## A deliberate ownership boundary
