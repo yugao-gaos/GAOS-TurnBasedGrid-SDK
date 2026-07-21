@@ -15,6 +15,12 @@ export {
   type SettlementTraceEntry,
 } from './settlement.js';
 export {
+  resolveChainReaction,
+  type ChainReactionContext,
+  type ChainReactionOptions,
+  type ChainReactionResult,
+} from './chain-reaction.js';
+export {
   fnv1a,
   mulberry32,
   roll,
