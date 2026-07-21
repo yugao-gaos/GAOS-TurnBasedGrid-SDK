@@ -48,3 +48,33 @@ export {
   type ConeFieldOptions,
   type ShortestGridPathOptions,
 } from './geometry.js';
+export {
+  AGENT_TRANSCRIPT_VERSION,
+  AgentEnvironment,
+  AgentEnvironmentError,
+  type AgentEnvironmentErrorCode,
+  type AgentEnvironmentOptions,
+  type AgentMetrics,
+  type AgentResetOptions,
+  type AgentTerminationReason,
+  type AgentTranscript,
+  type AgentTranscriptAction,
+  type AgentTurn,
+  type AgentTurnInfo,
+} from './agent-environment.js';
+export {
+  evaluateAgentEpisodes,
+  runAgentEpisode,
+  type AgentBatchCase,
+  type AgentBatchEpisode,
+  type AgentBatchResult,
+  type AgentEpisodeResult,
+  type AgentPolicy,
+} from './agent-evaluation.js';
+export {
+  AGENT_TOOL_DEFINITIONS,
+  createAgentToolAdapter,
+  type AgentToolAdapter,
+  type AgentToolDefinition,
+  type AgentToolName,
+} from './agent-tools.js';

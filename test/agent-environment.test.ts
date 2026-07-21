@@ -1,0 +1,142 @@
+import { describe, expect, it } from 'vitest';
+import {
+  AgentEnvironment,
+  AgentEnvironmentError,
+  createAgentToolAdapter,
+  evaluateAgentEpisodes,
+  runAgentEpisode,
+  type GridReducer,
+  type GridTurnView,
+} from '../src/engine/index.js';
+
+interface Level { goal: number }
+interface State { at: number; actionsUsed: number }
+
+const reducer: GridReducer<Level, State> = {
+  init: () => ({ at: 0, actionsUsed: 0 }),
+  apply: (state, action) => {
+    if (action.id === 'advance') return { at: state.at + 1, actionsUsed: state.actionsUsed + 1 };
+    if (action.id === 'jump' && action.index !== undefined) {
+      return { at: state.at + action.index, actionsUsed: state.actionsUsed + 1 };
+    }
+    throw new Error('reducer rejected action');
+  },
+  view: (state): GridTurnView => ({
+    actions: [
+      { id: 'advance', params: 'none' },
+      { id: 'jump', params: 'index' },
+    ],
+    status: state.at >= 3 ? 'won' : 'playing',
+    ...(state.at >= 3 ? { stars: state.actionsUsed === 2 ? 3 : 2 } : {}),
+    hud: { actionsUsed: state.actionsUsed, items: [{ index: 2 }] },
+  }),
+};
+
+const environment = (maxSteps = 10) => new AgentEnvironment({
+  reducer,
+  level: { goal: 3 },
+  seed: 42,
+  maxSteps,
+});
+
+describe('AgentEnvironment', () => {
+  it('requires reset and exposes concrete legal actions', () => {
+    const env = environment();
+    expect(() => env.observe()).toThrowError(
+      expect.objectContaining<Partial<AgentEnvironmentError>>({ code: 'not_started' }),
+    );
+    const turn = env.reset();
+    expect(turn.legalActions).toEqual([
+      { id: 'advance' },
+      { id: 'jump', index: 2 },
+    ]);
+    expect(turn.info).toMatchObject({ seed: 42, steps: 0, totalReward: 0 });
+  });
+
+  it('validates actions, terminates, rewards, and records a transcript', () => {
+    const env = environment();
+    env.reset();
+    expect(() => env.step({ id: 'jump', index: 9 })).toThrowError(
+      expect.objectContaining<Partial<AgentEnvironmentError>>({ code: 'illegal_action' }),
+    );
+    env.step({ id: 'advance' });
+    const final = env.step({ id: 'jump', index: 2 });
+    expect(final).toMatchObject({ reward: 3, terminated: true, truncated: false, done: true });
+    expect(final.info).toMatchObject({ steps: 2, totalReward: 3, terminationReason: 'won' });
+    expect(final.legalActions).toEqual([]);
+    expect(env.transcript()).toMatchObject({
+      version: '1.0',
+      seed: 42,
+      actions: [
+        { n: 1, action: { id: 'advance' }, reward: 0 },
+        { n: 2, action: { id: 'jump', index: 2 }, reward: 3 },
+      ],
+      result: { terminationReason: 'won' },
+    });
+    expect(() => env.step({ id: 'advance' })).toThrowError(
+      expect.objectContaining<Partial<AgentEnvironmentError>>({ code: 'episode_done' }),
+    );
+  });
+
+  it('distinguishes a safety truncation from reducer termination', () => {
+    const env = environment(1);
+    env.reset();
+    expect(env.step({ id: 'advance' })).toMatchObject({
+      done: true,
+      terminated: false,
+      truncated: true,
+      info: { terminationReason: 'step_limit' },
+    });
+  });
+
+  it('replays the same seed and canonical actions deterministically', () => {
+    const first = environment();
+    const second = environment();
+    first.replay([{ id: 'advance' }, { id: 'jump', index: 2 }]);
+    second.replay([{ id: 'advance' }, { id: 'jump', index: 2 }]);
+    expect(first.transcript()).toEqual(second.transcript());
+  });
+});
+
+describe('agent evaluation', () => {
+  it('runs async policies and aggregates deterministic batches', async () => {
+    const single = await runAgentEpisode(environment(), async (turn) => turn.legalActions.at(-1)!);
+    expect(single.finalTurn.info).toMatchObject({ terminationReason: 'won', steps: 2 });
+
+    const cases = [
+      { id: 'seed-1', level: { goal: 3 }, seed: 1 },
+      { id: 'seed-2', level: { goal: 3 }, seed: 2 },
+    ];
+    const batch = await evaluateAgentEpisodes(
+      cases,
+      (episode) => new AgentEnvironment({ reducer, level: episode.level, seed: episode.seed }),
+      (turn) => turn.legalActions.at(-1)!,
+    );
+    expect(batch.summary).toEqual({
+      episodes: 2,
+      won: 2,
+      failed: 0,
+      truncated: 0,
+      meanReward: 3,
+      meanSteps: 2,
+    });
+  });
+});
+
+describe('agent tool adapter', () => {
+  it('binds observe, act, reset, and transcript without a provider dependency', () => {
+    const env = environment();
+    const tools = createAgentToolAdapter(env);
+    expect(tools.definitions.map(({ name }) => name)).toEqual([
+      'observe', 'act', 'reset', 'transcript',
+    ]);
+    expect(tools.call('reset', { seed: 7 })).toMatchObject({ info: { seed: 7 } });
+    expect(tools.call('act', { action: { id: 'jump', index: 2 } }))
+      .toMatchObject({ done: false, info: { steps: 1 } });
+    expect(tools.call('observe')).toMatchObject({ info: { seed: 7, steps: 1 } });
+    expect(tools.call('transcript')).toMatchObject({
+      seed: 7,
+      actions: [{ action: { id: 'jump', index: 2 } }],
+    });
+  });
+});

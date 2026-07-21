@@ -1,14 +1,18 @@
 # GAOS Turn-Based Grid SDK
 
-TypeScript and Python clients for turn-based games hosted through the GAOS
-turn protocol, plus a reusable deterministic TypeScript grid engine. The
-repository contains three layers:
+An AI-native SDK for deterministic, turn-based grid environments. It provides
+TypeScript and Python clients for games hosted through the GAOS turn protocol,
+plus a reusable TypeScript engine and provider-neutral agent runtime. The
+repository contains four layers:
 
 - a genre-neutral v1 turn envelope, cursor, retry, and simultaneous-intent
   protocol; and
 - Arena-specific clients and observation types for the hosted grid game; and
 - reusable movement, pathfinding, sight geometry, scoring, shortest-path
-  solving, and replay verification through the `./engine` package subpath.
+  solving, and replay verification through the `./engine` package subpath; and
+- deterministic agent episodes with concrete action discovery, Gym-style
+  termination, rewards, transcripts, batch evaluation, and portable tool
+  definitions.
 
 Product content and policy are not included. Zonoid characters and abilities,
 campaign game types, authored levels, and seasonal/server rules stay in the
@@ -32,7 +36,7 @@ Repositories with GitHub access can instead pin an exact release tag without
 configuring the npm registry:
 
 ```sh
-npm install 'git+https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK.git#v0.3.0'
+npm install 'git+https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK.git#v0.4.0'
 ```
 
 Use the hosted Arena client:
@@ -76,6 +80,26 @@ The product supplies its reducer, levels, character catalog, ability data, and
 scoring thresholds. See [Engine boundary](docs/engine.md) for the ownership and
 adapter contracts.
 
+Run an agent locally against any injected deterministic reducer:
+
+```ts
+import {
+  AgentEnvironment,
+  runAgentEpisode,
+} from '@yugao-gaos/turn-based-grid-sdk/engine';
+
+const environment = new AgentEnvironment({ reducer, level, seed: 42 });
+const episode = await runAgentEpisode(
+  environment,
+  async (turn) => agent.choose(turn.observation, turn.legalActions),
+);
+
+console.log(episode.transcript.result);
+```
+
+See [Agentic play](docs/agentic-play.md) for local, hosted, batch-evaluation,
+Python, and tool/MCP integration patterns.
+
 ## Python
 
 Python wheels and source distributions are attached to each GitHub release.
@@ -83,7 +107,7 @@ The distribution is named `gaos-turn-based-grid-sdk`; the stable import name
 remains `agilabs_arena` for compatibility with existing integrations.
 
 ```sh
-pip install gaos_turn_based_grid_sdk-0.3.0-py3-none-any.whl
+pip install gaos_turn_based_grid_sdk-0.4.0-py3-none-any.whl
 ```
 
 ```python
