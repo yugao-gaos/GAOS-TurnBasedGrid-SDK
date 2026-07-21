@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   AgentEnvironment,
   AgentEnvironmentError,
+  createAgentToolAdapter,
   evaluateAgentEpisodes,
   runAgentEpisode,
   type GridReducer,
@@ -118,6 +119,24 @@ describe('agent evaluation', () => {
       truncated: 0,
       meanReward: 3,
       meanSteps: 2,
+    });
+  });
+});
+
+describe('agent tool adapter', () => {
+  it('binds observe, act, reset, and transcript without a provider dependency', () => {
+    const env = environment();
+    const tools = createAgentToolAdapter(env);
+    expect(tools.definitions.map(({ name }) => name)).toEqual([
+      'observe', 'act', 'reset', 'transcript',
+    ]);
+    expect(tools.call('reset', { seed: 7 })).toMatchObject({ info: { seed: 7 } });
+    expect(tools.call('act', { action: { id: 'jump', index: 2 } }))
+      .toMatchObject({ done: false, info: { steps: 1 } });
+    expect(tools.call('observe')).toMatchObject({ info: { seed: 7, steps: 1 } });
+    expect(tools.call('transcript')).toMatchObject({
+      seed: 7,
+      actions: [{ action: { id: 'jump', index: 2 } }],
     });
   });
 });
