@@ -1,6 +1,6 @@
 {
   "name": "@yugao-gaos/turn-based-grid-sdk",
-  "version": "0.9.1",
+  "version": "0.9.2",
   "description": "Deterministic grid mechanics and multiplayer infrastructure for agent-ready games.",
   "license": "Apache-2.0",
   "type": "module",

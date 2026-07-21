@@ -16,7 +16,7 @@ upgrading:
 ```json
 {
   "dependencies": {
-    "@yugao-gaos/turn-based-grid-sdk": "git+https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK.git#v0.9.1"
+    "@yugao-gaos/turn-based-grid-sdk": "git+https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK.git#v0.9.2"
   }
 }
 ```
