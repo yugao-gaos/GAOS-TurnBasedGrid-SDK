@@ -4,6 +4,17 @@ export {
   type Mover,
 } from './movement.js';
 export {
+  runSettlementCascade,
+  SettlementLimitError,
+  type SettlementContext,
+  type SettlementJob,
+  type SettlementOptions,
+  type SettlementPolicy,
+  type SettlementResolver,
+  type SettlementResult,
+  type SettlementTraceEntry,
+} from './settlement.js';
+export {
   fnv1a,
   mulberry32,
   roll,
