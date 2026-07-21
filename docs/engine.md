@@ -18,6 +18,8 @@ The SDK owns deterministic, product-neutral behavior:
 
 - simultaneous movement collision resolution, including footprints, movement
   chains, rotations, swaps, and priority;
+- deterministic multi-wave turn settlement through an explicit consequence
+  worklist, including convergence guards, next-turn deferral, and causal traces;
 - shortest cardinal pathfinding, Bresenham traversal, line-of-sight checks, and
   widening cone geometry through injected board/blocker policies;
 - seeded random draws and permutations;
@@ -37,6 +39,10 @@ The product owns content and policy:
 The dividing rule is: the SDK implements **how a reusable mechanism behaves**;
 the product decides **which content uses it, where it is enabled, and with what
 values**.
+
+Turn settlement is described in [Deterministic turn settlement](settlement.md).
+One submitted turn may resolve through several same-turn waves before the SDK
+returns control to the caller.
 
 Geometry APIs accept callbacks for cell existence and blocking. The SDK owns
 the algorithm; the product retains its terrain tokens, traversal capabilities,
