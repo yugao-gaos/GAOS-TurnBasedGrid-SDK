@@ -4,6 +4,12 @@
 
 **Developer Tools**
 
+## One-line elevator pitch — ready to paste
+
+GAOS (Gaming AGI Open SDK) is an open-source, community-driven SDK for building
+game-as-benchmark arenas where humans and AI agents compete on equal terms and
+are evaluated by the same standards to help advance AGI.
+
 ## Project description — ready to paste
 
 GAOS (Gaming AGI Open SDK) is an Apache-2.0 TypeScript and Python toolkit for
