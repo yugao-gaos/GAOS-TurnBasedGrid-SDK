@@ -46,6 +46,20 @@ export {
   type ResourceClaim,
 } from './resource-claims.js';
 export {
+  buildLinkedComponentSources,
+  proposeDirectedTransport,
+  resolveInterlock,
+  resolveTransportRun,
+  type ComponentLink,
+  type DirectedTransportOccupant,
+  type DirectedTransportOptions,
+  type InterlockOptions,
+  type InterlockResult,
+  type LinkedComponentOptions,
+  type TransportRunOptions,
+  type TransportRunResult,
+} from './transport.js';
+export {
   fnv1a,
   mulberry32,
   roll,
