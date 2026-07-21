@@ -10,7 +10,9 @@ requires-python = ">=3.10"
 dependencies = []
 
 [project.urls]
-Homepage = "https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK"
+Homepage = "https://yugao-gaos.github.io/GAOS-TurnBasedGrid-SDK/"
+Documentation = "https://yugao-gaos.github.io/GAOS-TurnBasedGrid-SDK/python"
+Repository = "https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK"
 Issues = "https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK/issues"
 
 [project.optional-dependencies]

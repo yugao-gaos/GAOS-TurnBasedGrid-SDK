@@ -36,6 +36,9 @@
   ],
   "scripts": {
     "build": "tsc -p tsconfig.build.json",
+    "docs:dev": "vitepress dev docs",
+    "docs:build": "vitepress build docs",
+    "docs:preview": "vitepress preview docs",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "prepare": "npm run build",
@@ -48,13 +51,14 @@
   "bugs": {
     "url": "https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK/issues"
   },
-  "homepage": "https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK#readme",
+  "homepage": "https://yugao-gaos.github.io/GAOS-TurnBasedGrid-SDK/",
   "publishConfig": {
     "registry": "https://npm.pkg.github.com"
   },
   "devDependencies": {
     "@types/node": "^22.20.1",
     "typescript": "^5.5.4",
+    "vitepress": "1.6.4",
     "vitest": "^3.2.7"
   }
 }

@@ -6,21 +6,22 @@ plus a reusable TypeScript engine and provider-neutral agent runtime. The
 repository contains six layers:
 
 - a genre-neutral v1 turn envelope, cursor, retry, and simultaneous-intent
-  protocol; and
-- Arena-specific clients and observation types for the hosted grid game; and
-- reusable movement, pathfinding, sight geometry, scoring, shortest-path
-  solving, and replay verification through the `./engine` package subpath; and
+  protocol;
+- Arena-specific clients and observation types for the hosted grid game;
+- reusable movement, settlement, pathfinding, sight geometry, scoring,
+  solving, and replay verification through the `./engine` package subpath;
 - deterministic agent episodes with concrete action discovery, Gym-style
-  termination, rewards, transcripts, batch evaluation, and portable tool
-  definitions; and
+  termination, rewards, transcripts, batch evaluation, and portable tools;
 - extensible keyed-model drivers for Anthropic, OpenAI, xAI, and OpenRouter;
-  and
 - reusable launch recipes and a standalone CLI for Claude Code, Ollama-backed
   Claude Code, Codex, Cursor, Grok, OpenCode, and declarative custom agents.
 
 Product content and policy are not included. Zonoid characters and abilities,
 campaign game types, authored levels, and seasonal/server rules stay in the
 platform repository.
+
+**[Read the documentation](https://yugao-gaos.github.io/GAOS-TurnBasedGrid-SDK/)**
+or begin with the [quickstart](https://yugao-gaos.github.io/GAOS-TurnBasedGrid-SDK/quickstart).
 
 ## TypeScript
 
@@ -181,6 +182,7 @@ npm install
 npm run typecheck
 npm test
 npm run build
+npm run docs:build
 
 cd python
 PYTHONPATH=. python3 -m pytest tests
@@ -189,6 +191,10 @@ python3 -m build
 
 Live integration tests use `ARENA_BASE_URL` and skip automatically when a
 compatible API host is not available.
+
+Use `npm run docs:dev` to work on the documentation locally. See
+[CONTRIBUTING.md](CONTRIBUTING.md) for contribution checks and [SECURITY.md](SECURITY.md)
+for private vulnerability reporting.
 
 ## Releases
 
