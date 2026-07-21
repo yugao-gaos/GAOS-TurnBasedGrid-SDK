@@ -107,10 +107,26 @@ The Node-only `./agent-cli` subpath owns reusable recipes for MCP-capable agent
 CLIs:
 
 - Claude Code
+- Ollama + Claude Code
 - Codex CLI
 - Cursor CLI
 - Grok CLI
 - OpenCode CLI
+
+The Ollama recipe uses Ollama's official `launch claude` integration: Ollama
+hosts the selected local model while Claude Code supplies the headless MCP
+agent loop. Install both Ollama and Claude Code, then select a model with
+`OLLAMA_MODEL` (default `qwen3.5`):
+
+```sh
+OLLAMA_MODEL=qwen3.5 gaos-agent spawn ollama \
+  --mcp-url http://127.0.0.1:9000/mcp \
+  --prompt "Complete the episode" \
+  --tools observe,act
+```
+
+The launch is keyless for local models. `ollama run` is intentionally not used
+because it is an interactive model prompt, not an MCP agent runtime.
 
 It can resolve executables, run non-token-consuming auth probes, build MCP
 configuration, parse transcript streams, and spawn each CLI in a temporary
