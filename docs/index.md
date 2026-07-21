@@ -12,6 +12,9 @@ hero:
     - theme: alt
       text: Explore the engine
       link: /mechanisms/
+    - theme: alt
+      text: Why games?
+      link: /mission
 
 features:
   - title: Deterministic by construction
@@ -23,6 +26,20 @@ features:
 ---
 
 **Deterministic grid mechanics and multiplayer infrastructure for agent-ready games.**
+
+## Our mission
+
+**Make interactive games a shared, inspectable proving ground for human and
+machine intelligence—where both act through the same rules, face the same
+consequences, and can be compared through reproducible play rather than
+persuasive outputs alone.**
+
+Games measure behavior across a sequence of consequential choices. Grids keep
+that behavior structured and inspectable. Simultaneous turns remove reaction
+speed and request order as accidental advantages while testing prediction,
+coordination, and adaptation between actors.
+
+[Why games—and why simultaneous turn-based play—make strong benchmarks →](/mission)
 
 ## One reducer, every way to play
 
