@@ -57,6 +57,24 @@ export interface ShortestGridPathOptions {
   steps?: readonly Cell[];
 }
 
+export interface NearestReachableCellOptions {
+  width: number;
+  height: number;
+  start: Cell;
+  isBlocked: (cell: Cell) => boolean;
+  /** Product-owned qualification rule for a reachable candidate cell. */
+  qualifies: (cell: Cell) => boolean;
+  steps?: readonly Cell[];
+  /** Stable product-owned preference among equally near qualified cells. */
+  compareEqualDistance?: (a: Cell, b: Cell) => number;
+}
+
+export interface ReachableCellPath {
+  goal: Cell;
+  /** Shortest path excluding the start and including `goal`. */
+  path: Cell[];
+}
+
 /** Shortest cardinal path, excluding the start and including the goal. */
 export function shortestGridPath(options: ShortestGridPathOptions): Cell[] {
   const { width, height, start, goal, isBlocked } = options;
@@ -87,6 +105,57 @@ export function shortestGridPath(options: ShortestGridPathOptions): Cell[] {
     current = previous.get(key(current)) ?? null;
   }
   return path;
+}
+
+/**
+ * Find the nearest reachable cell accepted by a caller-supplied rule.
+ *
+ * The SDK owns traversal, shortest-path guarantees, and deterministic
+ * equal-distance selection. Products retain all semantic policy by injecting
+ * `qualifies` (for example firing range, line of sight, or interaction rules).
+ */
+export function nearestReachableCellPath(
+  options: NearestReachableCellOptions,
+): ReachableCellPath | undefined {
+  const { width, height, start, isBlocked, qualifies } = options;
+  const steps = options.steps ?? CARDINAL_STEPS;
+  const key = ([x, y]: Cell): string => `${x},${y}`;
+  const startKey = key(start);
+  const previous = new Map<string, Cell | null>([[startKey, null]]);
+  const queue: Cell[] = [start];
+  if (qualifies(start)) return { goal: [...start] as Cell, path: [] };
+
+  let layerStart = 0;
+  while (layerStart < queue.length) {
+    const layerEnd = queue.length;
+    for (let cursor = layerStart; cursor < layerEnd; cursor++) {
+      const current = queue[cursor]!;
+      for (const [dx, dy] of steps) {
+        const next: Cell = [current[0] + dx, current[1] + dy];
+        if (next[0] < 0 || next[1] < 0 || next[0] >= width || next[1] >= height) continue;
+        const nextKey = key(next);
+        if (previous.has(nextKey) || isBlocked(next)) continue;
+        previous.set(nextKey, current);
+        queue.push(next);
+      }
+    }
+
+    const goals = queue.slice(layerEnd).filter(qualifies);
+    if (goals.length > 0) {
+      const goal = options.compareEqualDistance
+        ? [...goals].sort(options.compareEqualDistance)[0]!
+        : goals[0]!;
+      const path: Cell[] = [];
+      let current: Cell | null = goal;
+      while (current && key(current) !== startKey) {
+        path.unshift(current);
+        current = previous.get(key(current)) ?? null;
+      }
+      return { goal: [...goal] as Cell, path };
+    }
+    layerStart = layerEnd;
+  }
+  return undefined;
 }
 
 /** Test line of sight; endpoints are visible even when they are blockers. */

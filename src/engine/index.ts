@@ -122,9 +122,12 @@ export {
   coneFieldCells,
   lineOfSightClear,
   manhattanDistance,
+  nearestReachableCellPath,
   shortestGridPath,
   type CardinalDirection,
   type ConeFieldOptions,
+  type NearestReachableCellOptions,
+  type ReachableCellPath,
   type ShortestGridPathOptions,
 } from './geometry.js';
 export {
