@@ -61,5 +61,8 @@
     "typescript": "^5.5.4",
     "vitepress": "1.6.4",
     "vitest": "^3.2.7"
+  },
+  "overrides": {
+    "vite": "6.4.3"
   }
 }
