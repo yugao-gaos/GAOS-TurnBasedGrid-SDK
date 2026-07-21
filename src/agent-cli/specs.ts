@@ -1,4 +1,6 @@
 export const DEFAULT_CLAUDE_CLI_MODEL = 'claude-opus-4-8';
+/** Ollama's documented local agent model recommendation. Override with OLLAMA_MODEL. */
+export const DEFAULT_OLLAMA_CLI_MODEL = 'qwen3.5';
 
 export interface CliAgentLaunchContext {
   mcpUrl: string;
@@ -136,31 +138,39 @@ export function parseGenericLine(line: string): string[] {
   }
 }
 
+function claudeLaunchArgs(
+  context: CliAgentLaunchContext,
+  options: { model?: string } = {},
+): string[] {
+  const values = contextValues(context);
+  return [
+    '-p', context.prompt,
+    ...(options.model ? ['--model', options.model] : []),
+    '--mcp-config', JSON.stringify({
+      mcpServers: { [values.serverName]: { type: 'http', url: context.mcpUrl } },
+    }),
+    '--strict-mcp-config',
+    '--allowedTools', values.allowedTools,
+    '--permission-mode', 'bypassPermissions',
+    '--output-format', 'stream-json',
+    '--verbose',
+  ];
+}
+
 /** Built-in MCP launch recipes. Product prompts and MCP implementations stay outside this package. */
-export function createBuiltinCliAgents(options: { claudeModel?: string } = {}): CliAgentSpec[] {
+export function createBuiltinCliAgents(options: {
+  claudeModel?: string;
+  ollamaModel?: string;
+} = {}): CliAgentSpec[] {
   return [
     {
       id: 'claude',
       label: 'Claude Code',
       bin: 'claude',
-      launch: (context) => {
-        const values = contextValues(context);
-        return {
-          argv: [
-            '-p', context.prompt,
-            '--model', options.claudeModel ?? DEFAULT_CLAUDE_CLI_MODEL,
-            '--mcp-config', JSON.stringify({
-              mcpServers: { [values.serverName]: { type: 'http', url: context.mcpUrl } },
-            }),
-            '--strict-mcp-config',
-            '--allowedTools', values.allowedTools,
-            '--permission-mode', 'bypassPermissions',
-            '--output-format', 'stream-json',
-            '--verbose',
-          ],
-          files: {},
-        };
-      },
+      launch: (context) => ({
+        argv: claudeLaunchArgs(context, { model: options.claudeModel ?? DEFAULT_CLAUDE_CLI_MODEL }),
+        files: {},
+      }),
       parseLine: parseStreamJson,
       login: 'In a terminal run: claude auth login (or open claude and type /login)',
       status: {
@@ -171,6 +181,29 @@ export function createBuiltinCliAgents(options: { claudeModel?: string } = {}): 
           const plan = /"subscriptionType":\s*"([^"]+)"/.exec(output)?.[1];
           return email ? `signed in as ${email}${plan ? ` (${plan})` : ''}` : 'not signed in';
         },
+      },
+    },
+    {
+      id: 'ollama',
+      label: 'Ollama + Claude Code',
+      bin: 'ollama',
+      launch: (context) => ({
+        argv: [
+          'launch',
+          'claude',
+          '--model', options.ollamaModel ?? DEFAULT_OLLAMA_CLI_MODEL,
+          '--yes',
+          '--',
+          ...claudeLaunchArgs(context),
+        ],
+        files: {},
+      }),
+      parseLine: parseStreamJson,
+      login: 'Install Ollama and Claude Code. Ollama runs the selected local model; no model API key is required.',
+      status: {
+        argv: ['ls'],
+        ok: (code) => code === 0,
+        summary: () => 'Ollama is installed and its local service is reachable',
       },
     },
     {
@@ -314,12 +347,15 @@ export function customCliAgentsFromJson(raw: string): CliAgentSpec[] {
 
 export function createDefaultCliAgentRegistry(options: {
   claudeModel?: string;
+  ollamaModel?: string;
   customAgentsJson?: string;
 } = {}): CliAgentRegistry {
-  const registry = new CliAgentRegistry(createBuiltinCliAgents({ claudeModel: options.claudeModel }));
+  const registry = new CliAgentRegistry(createBuiltinCliAgents({
+    claudeModel: options.claudeModel,
+    ollamaModel: options.ollamaModel,
+  }));
   if (options.customAgentsJson) {
     for (const agent of customCliAgentsFromJson(options.customAgentsJson)) registry.register(agent);
   }
   return registry;
 }
-

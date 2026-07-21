@@ -27,9 +27,9 @@ afterEach(() => {
 });
 
 describe('CLI agent recipes', () => {
-  it('ships five extensible built-in recipes', () => {
+  it('ships six extensible built-in recipes', () => {
     const agents = createBuiltinCliAgents();
-    expect(agents.map(({ id }) => id)).toEqual(['claude', 'codex', 'cursor', 'grok', 'opencode']);
+    expect(agents.map(({ id }) => id)).toEqual(['claude', 'ollama', 'codex', 'cursor', 'grok', 'opencode']);
     const registry = new CliAgentRegistry(agents);
     expect(registry.require('codex').bin).toBe('codex');
     expect(() => registry.register(agents[0]!)).toThrow('already registered');
@@ -46,6 +46,15 @@ describe('CLI agent recipes', () => {
     const claude = registry.require('claude').launch(context);
     expect(claude.argv).toContain('mcp__arena__observe,mcp__arena__act,mcp__arena__say');
     expect(claude.argv.join(' ')).toContain('http://127.0.0.1:9000/mcp');
+
+    const ollama = createDefaultCliAgentRegistry({ ollamaModel: 'local-test-model' })
+      .require('ollama')
+      .launch(context);
+    expect(ollama.argv.slice(0, 7)).toEqual([
+      'launch', 'claude', '--model', 'local-test-model', '--yes', '--', '-p',
+    ]);
+    expect(ollama.argv).toContain('mcp__arena__observe,mcp__arena__act,mcp__arena__say');
+    expect(ollama.argv).not.toContain('claude-opus-4-8');
 
     const codex = registry.require('codex').launch(context);
     expect(codex.argv).toContain('mcp_servers.arena.url="http://127.0.0.1:9000/mcp"');
