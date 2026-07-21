@@ -29,6 +29,14 @@ export {
   type ProjectileAction,
 } from './projectiles.js';
 export {
+  commitPushChain,
+  planPushChain,
+  type PushChainCommitter,
+  type PushChainOptions,
+  type PushChainStep,
+  type PushDestination,
+} from './push-chain.js';
+export {
   fnv1a,
   mulberry32,
   roll,
