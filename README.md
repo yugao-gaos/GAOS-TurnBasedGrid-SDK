@@ -75,6 +75,7 @@ hosted Arena client:
 ```ts
 import {
   resolveMoves,
+  runSettlementCascade,
   scoreStars,
   solveGridLevel,
 } from '@yugao-gaos/turn-based-grid-sdk/engine';
@@ -82,7 +83,8 @@ import {
 
 The product supplies its reducer, levels, character catalog, ability data, and
 scoring thresholds. See [Engine boundary](docs/engine.md) for the ownership and
-adapter contracts.
+adapter contracts, and [Deterministic turn settlement](docs/settlement.md) for
+multi-step same-turn consequence resolution.
 
 Run an agent locally against any injected deterministic reducer:
 
