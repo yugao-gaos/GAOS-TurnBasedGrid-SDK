@@ -59,6 +59,11 @@ export {
   type GridRayResult,
 } from './rays.js';
 export {
+  evaluateBehaviorTree,
+  type BehaviorTreeAdapter,
+  type BehaviorTreeNodeView,
+} from './behavior-tree.js';
+export {
   arbitrateResourceClaims,
   type ResourceArbitration,
   type ResourceClaim,
