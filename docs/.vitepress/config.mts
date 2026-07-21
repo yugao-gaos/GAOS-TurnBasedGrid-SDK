@@ -79,6 +79,7 @@ export default defineConfig({
       {
         text: 'Project',
         items: [
+          { text: 'Built with GPT-5.6 Sol', link: '/building-with-gpt-5-6-sol' },
           { text: 'Support and compatibility', link: '/support' },
           { text: 'Releasing', link: '/releases' },
         ],
