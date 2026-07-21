@@ -17,3 +17,22 @@ export {
   type BudgetUsage,
   type StarThresholds,
 } from './scoring.js';
+export {
+  type GridActionDefinition,
+  type GridReducer,
+  type GridSubmittedAction,
+  type GridTurnView,
+} from './contracts.js';
+export {
+  enumerateGridActions,
+  solveGridLevel,
+  type GridSolveResult,
+  type GridSolverOptions,
+} from './solver.js';
+export {
+  recheckGridTranscript,
+  runLevelSeed,
+  type GridRecheckResult,
+  type GridTranscriptAction,
+  type GridTranscriptHeader,
+} from './replay.js';
