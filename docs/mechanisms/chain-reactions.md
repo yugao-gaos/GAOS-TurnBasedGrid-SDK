@@ -45,7 +45,7 @@ This is identity deduplication, not object-reference deduplication.
 The result is a specialized settlement result containing the mutated state,
 step and wave counts, a causal trace, and any deferred work. Chain reactions do
 not defer nodes themselves, but the common result shape makes traces compatible
-with the [settlement kernel](settlement.md).
+with the [settlement kernel](/settlement).
 
 `maxReactions` must be a positive upper bound on distinct activations. Exceeding
 it throws `SettlementLimitError`; it does not return a partial success. Derive
@@ -61,4 +61,3 @@ include a product-owned phase/version when distinct activations are legitimate.
 
 The `react` callback should return neighbors in a stable order. Iterating an
 unordered external collection can make same-wave effects differ between runs.
-

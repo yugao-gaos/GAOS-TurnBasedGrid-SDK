@@ -11,7 +11,7 @@ hero:
       link: /quickstart
     - theme: alt
       text: Explore the engine
-      link: /engine
+      link: /mechanisms/
 
 features:
   - title: Deterministic by construction
@@ -68,5 +68,7 @@ Product reducer + authored content
 
 The rule is simple: the SDK defines **how a reusable mechanism behaves**. The
 product decides **where it is used and what it means**.
+
+[Read the complete mechanism reference →](/mechanisms/)
 
 [See the architecture map →](/architecture)

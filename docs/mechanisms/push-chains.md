@@ -69,7 +69,7 @@ commitPushChain(steps, {
 This prevents overwrites while preserving causal near-to-far feedback. Arrival
 callbacks should normally enqueue work rather than immediately start a nested
 resolution loop; see [arrival rules](arrivals.md) and
-[turn settlement](settlement.md).
+[turn settlement](/settlement).
 
 ## Product responsibilities
 
@@ -77,4 +77,3 @@ The product owns push eligibility, weight, strength, terrain, destination
 transforms, simultaneous skip qualification, sounds, animation, and consequences.
 The SDK owns linear traversal, all-or-nothing planning, metadata carriage, and
 commit order.
-
