@@ -19,6 +19,8 @@ export interface GridSolverOptions<TState> {
   stateKey?: (state: TState) => string;
   /** Override action enumeration for a custom observation surface. */
   actions?: (view: GridTurnView) => GridSubmittedAction[];
+  /** Product policy can exclude actions that cannot help search, such as restart. */
+  includeAction?: (action: GridSubmittedAction, view: GridTurnView) => boolean;
 }
 
 const VOLATILE_KEYS = ['lastEvents', 'actionsUsed', 'narrative', 'log'];
@@ -65,7 +67,6 @@ function stateFingerprint(value: string): string {
 export function enumerateGridActions(view: GridTurnView): GridSubmittedAction[] {
   const submitted: GridSubmittedAction[] = [];
   for (const action of view.actions) {
-    if (action.id === 'Action 9') continue;
     switch (action.params) {
       case 'none':
         submitted.push({ id: action.id });
@@ -143,7 +144,9 @@ export function solveGridLevel<TLevel, TState, TView extends GridTurnView>(
   for (let depth = 1; depth <= options.maxActions; depth++) {
     const next: typeof frontier = [];
     for (const { state, nodeId: parentId } of frontier) {
-      for (const action of actionsFor(reducer.view(state))) {
+      const currentView = reducer.view(state);
+      for (const action of actionsFor(currentView)) {
+        if (options.includeAction && !options.includeAction(action, currentView)) continue;
         let nextState: TState;
         try {
           nextState = reducer.apply(state, action);

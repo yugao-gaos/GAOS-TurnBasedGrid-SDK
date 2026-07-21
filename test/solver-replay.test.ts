@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  enumerateGridActions,
   recheckGridTranscript,
   runLevelSeed,
   solveGridLevel,
@@ -48,6 +49,25 @@ describe('generic grid solver', () => {
   it('reports an exhausted search bound', () => {
     const result = solveGridLevel(reducer, { goal: 3 }, { maxActions: 1 });
     expect(result).toMatchObject({ min: null, capped: false });
+  });
+
+  it('keeps action filtering in product policy', () => {
+    const withRestart: GridReducer<Level, State> = {
+      ...reducer,
+      view: (state) => ({
+        ...reducer.view(state),
+        actions: [
+          ...reducer.view(state).actions,
+          { id: 'Action 9', params: 'none' },
+        ],
+      }),
+    };
+    expect(enumerateGridActions(withRestart.view({ at: 0, actionsUsed: 0 })))
+      .toContainEqual({ id: 'Action 9' });
+    expect(solveGridLevel(withRestart, { goal: 3 }, {
+      maxActions: 4,
+      includeAction: (action) => action.id !== 'Action 9',
+    }).min).toBe(2);
   });
 });
 
