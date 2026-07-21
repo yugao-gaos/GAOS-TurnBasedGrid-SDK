@@ -59,7 +59,7 @@ Session ID are collected in [DEVPOST.md](DEVPOST.md).
 
 - **Source:** https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK
 - **Documentation:** https://yugao-gaos.github.io/GAOS-TurnBasedGrid-SDK/
-- **Release:** https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK/releases/tag/v0.9.1
+- **Release:** https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK/releases/tag/v0.9.2
 - **Live game and prebuilt download:** https://zonoid.ai
 
 ### Install and test a prebuilt release
@@ -72,7 +72,7 @@ TypeScript / Node.js:
 mkdir gaos-judge
 cd gaos-judge
 npm init -y
-npm install 'https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK/releases/download/v0.9.1/yugao-gaos-turn-based-grid-sdk-0.9.1.tgz'
+npm install 'https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK/releases/download/v0.9.2/yugao-gaos-turn-based-grid-sdk-0.9.2.tgz'
 node --input-type=module -e "import { scoreStars } from '@yugao-gaos/turn-based-grid-sdk/engine'; console.log(scoreStars(6, { three: 6, two: 9 }))"
 ```
 
@@ -82,7 +82,7 @@ Python:
 
 ```sh
 python3 -m venv .venv
-.venv/bin/python -m pip install 'https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK/releases/download/v0.9.1/gaos_turn_based_grid_sdk-0.9.1-py3-none-any.whl'
+.venv/bin/python -m pip install 'https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK/releases/download/v0.9.2/gaos_turn_based_grid_sdk-0.9.2-py3-none-any.whl'
 .venv/bin/python -c "import agilabs_arena; print(agilabs_arena.__name__)"
 ```
 
@@ -158,7 +158,7 @@ Repositories with GitHub access can instead pin an exact release tag without
 configuring the npm registry:
 
 ```sh
-npm install 'git+https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK.git#v0.9.1'
+npm install 'git+https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK.git#v0.9.2'
 ```
 
 Use the hosted Arena client:
@@ -265,7 +265,7 @@ The distribution is named `gaos-turn-based-grid-sdk`; the stable import name
 remains `agilabs_arena` for compatibility with existing integrations.
 
 ```sh
-pip install gaos_turn_based_grid_sdk-0.9.1-py3-none-any.whl
+pip install gaos_turn_based_grid_sdk-0.9.2-py3-none-any.whl
 ```
 
 ```python
