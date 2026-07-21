@@ -26,7 +26,7 @@ submitted action
 
 The SDK does not prescribe that exact pipeline. A product composes only the
 mechanisms it needs and explicitly schedules their causal relationships through
-the [settlement kernel](settlement.md).
+the [settlement kernel](/settlement).
 
 ## Pages
 
@@ -35,7 +35,7 @@ the [settlement kernel](settlement.md).
 | [Grid model](grid-model.md) | Coordinates, action shapes, observations, and the reducer boundary |
 | [Simultaneous movement](movement.md) | Collision, priority, footprints, chains, rotations, and swaps |
 | [Geometry and FOV](geometry.md) | Cardinal paths, nearest reachable cells, lines, sight, and cones |
-| [Turn settlement](settlement.md) | Multi-wave consequence scheduling, duplicate policy, traces, and limits |
+| [Turn settlement](/settlement) | Multi-wave consequence scheduling, duplicate policy, traces, and limits |
 | [Chain reactions](chain-reactions.md) | Breadth-first, once-per-identity propagation |
 | [Projectiles and flight](projectiles.md) | Snapshot-safe microsteps and bounded full-flight passes |
 | [Push chains](push-chains.md) | Mutation-free planning and safe commit order |
@@ -74,4 +74,3 @@ import {
   shortestGridPath,
 } from '@yugao-gaos/turn-based-grid-sdk/engine';
 ```
-

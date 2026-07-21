@@ -33,7 +33,8 @@ to depend on a model provider.
 | Outcomes | star calculation and budget-failure precedence | thresholds and budgets |
 | Verification | seeded randomness, solving, transcript re-simulation | reducer, levels and action schema |
 
-Read [Reusable grid engine](/engine) for API contracts and examples.
+Read the [mechanism reference](/mechanisms/) for detailed contracts, ordering,
+examples, edge cases, and product responsibilities.
 
 ## One deterministic core
 

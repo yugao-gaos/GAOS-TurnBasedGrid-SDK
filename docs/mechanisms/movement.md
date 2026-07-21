@@ -66,7 +66,7 @@ finalCells.get('guard'); // [3, 1]
 The function returns a new `Map<id, Cell>`. It does not mutate the product
 world and it does not emit collision or arrival events. Commit the returned
 positions as one batch, then enqueue arrivals or other consequences through
-the [settlement kernel](settlement.md).
+the [settlement kernel](/settlement).
 
 ## Important boundaries
 
@@ -85,4 +85,3 @@ the [settlement kernel](settlement.md).
 Cover at least: a legal rotation, a blocked chain that fully reverts, contested
 destinations, both swap consent states, equal-priority input ordering, a
 multi-cell footprint, and an out-of-bounds target reported as static blocked.
-

@@ -47,6 +47,5 @@ within that persistence scope.
 
 Conditions, effects, trigger reset policy, scopes, spawning, dialogue, rewards,
 and visual events remain product-owned. When effects cause more same-turn work,
-enqueue it through [turn settlement](settlement.md) instead of recursively
+enqueue it through [turn settlement](/settlement) instead of recursively
 calling the entire trigger pass.
-

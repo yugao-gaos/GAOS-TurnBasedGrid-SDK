@@ -68,7 +68,7 @@ A common composition is:
 4. allow relays or switches to update;
 5. run the next pass only if flight remains active.
 
-Use [turn settlement](settlement.md) when these consequences can create more
+Use [turn settlement](/settlement) when these consequences can create more
 same-turn work. Keep presentation events separate from collision policy so a
 replay reaches the same state without running animation code.
 
@@ -80,4 +80,3 @@ replay reaches the same state without running animation code.
 - a collision that consumes rather than lands;
 - a relay that changes the next path segment; and
 - a flight that remains active at the pass bound.
-

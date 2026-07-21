@@ -45,7 +45,7 @@ An arrival normally follows a committed state move:
 3. `resolveArrival` evaluates rules against the committed state;
 4. rule effects enqueue any further same-turn consequences.
 
-Using the [settlement kernel](settlement.md) prevents an arrival-triggered
+Using the [settlement kernel](/settlement) prevents an arrival-triggered
 teleport, pickup, gate update, or second movement from starting an uncontrolled
 nested reducer call.
 
@@ -59,4 +59,3 @@ nested reducer call.
 
 The returned id list is useful for tests and traces, but product state and
 events remain the authoritative effect results.
-

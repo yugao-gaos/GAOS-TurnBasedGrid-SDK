@@ -12,6 +12,10 @@ import {
 } from '@yugao-gaos/turn-based-grid-sdk/engine';
 ```
 
+This page defines the engine's ownership boundary and composition model. For
+the exact rules, examples, edge cases, and integration checklist for every
+mechanism, use the [complete mechanism reference](/mechanisms/).
+
 ## Ownership boundary
 
 The SDK owns deterministic, product-neutral behavior:
