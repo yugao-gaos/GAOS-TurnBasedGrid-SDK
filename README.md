@@ -75,6 +75,7 @@ hosted Arena client:
 ```ts
 import {
   planPushChain,
+  resolveGateTransition,
   resolveMoves,
   resolveChainReaction,
   runSettlementCascade,

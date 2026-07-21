@@ -41,6 +41,14 @@ export {
   type ArrivalRule,
 } from './arrival.js';
 export {
+  resolveGateTransition,
+  type GateMode,
+  type GateState,
+  type GateTransition,
+  type GateTransitionInput,
+  type GateTransitionResult,
+} from './gates.js';
+export {
   arbitrateResourceClaims,
   type ResourceArbitration,
   type ResourceClaim,
