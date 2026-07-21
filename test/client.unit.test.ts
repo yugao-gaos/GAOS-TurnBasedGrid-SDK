@@ -1,0 +1,378 @@
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import { createIntentWindow, pendingEnvelope, turnEnvelope } from '../src/protocol.js';
+import {
+  ArenaClient,
+  ProtocolMismatchError,
+  parseTurnResult,
+  type Turn,
+} from '../src/index.js';
+
+const TURN: Turn = {
+  turnNumber: 0,
+  controlRevision: 0,
+  narrative: null,
+  grid: '@ .',
+  visualEvents: [],
+  actions: [{ id: 'Action 1', params: 'none' }],
+  status: 'playing',
+  hud: { actionsUsed: 0, maxActions: 4, carrying: null },
+};
+
+afterEach(() => vi.unstubAllGlobals());
+
+describe('ArenaClient v1 protocol adapter', () => {
+  it('preserves battle integrity and additive character observations', () => {
+    const unit = {
+      id: 'hacker',
+      participantId: 'north',
+      team: 'player',
+      at: [1, 2] as [number, number],
+      hp: 2,
+      maxHp: 2,
+      character: 'hacker',
+      cast: 'hacker',
+      controlMode: 'direct' as const,
+      abilities: ['hack_drone', 'remote_control'],
+      statuses: [{ kind: 'shield_field', phase: 'active', remaining: 1, capacity: 2 }],
+    };
+    const character = (({ hp: _hp, maxHp: _maxHp, ...entry }) => entry)(unit);
+    const result = parseTurnResult<Turn>(turnEnvelope('s1', 0, {
+      ...TURN,
+      hud: { ...TURN.hud, units: [unit], characters: [character] },
+    }));
+
+    expect(result.turn.hud.units).toEqual([unit]);
+    expect(result.turn.hud.characters).toEqual([character]);
+  });
+
+  it('preserves the typed seat-relative Arena draw discriminator', () => {
+    const result = parseTurnResult<Turn>(turnEnvelope('arena-1', 4, {
+      ...TURN,
+      turnNumber: 4,
+      status: 'failed',
+      hud: { ...TURN.hud, arenaOutcome: 'draw' },
+    }));
+
+    expect(result.turn.hud.arenaOutcome).toBe('draw');
+  });
+
+  it('rejects unversioned turn-shaped responses', () => {
+    expect(() => parseTurnResult(TURN)).toThrow(ProtocolMismatchError);
+    expect(() => parseTurnResult({
+      ...turnEnvelope('s1', 0, TURN),
+      sessionId: '',
+    })).toThrow(ProtocolMismatchError);
+    expect(() => parseTurnResult({
+      ...turnEnvelope('s1', 0, TURN),
+      turnId: '',
+    })).toThrow(ProtocolMismatchError);
+    expect(() => parseTurnResult({
+      ...turnEnvelope('s1', 0, TURN),
+      revision: -1,
+    })).toThrow(ProtocolMismatchError);
+  });
+
+  it('sends the generic command envelope and polls pending turns once', async () => {
+    const window = createIntentWindow('s1', 0, ['player', 'remote']);
+    window.intents.player = {
+      participantId: 'player',
+      submissionId: 'request-1',
+      command: { id: 'Action 1' },
+    };
+    const responses = [
+      new Response(JSON.stringify(turnEnvelope('s1', 0, TURN)), { status: 201 }),
+      new Response(JSON.stringify(pendingEnvelope(window, TURN, 'player')), { status: 202 }),
+      new Response(JSON.stringify(turnEnvelope('s1', 1, { ...TURN, turnNumber: 1 }))),
+    ];
+    const calls: Array<[RequestInfo | URL, RequestInit | undefined]> = [];
+    const fetchMock = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      calls.push([input, init]);
+      return responses.shift()!;
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const client = new ArenaClient('https://example.test');
+    const start = await client.createSession({
+      gameMode: 'challenge',
+      playMethod: 'human',
+      levelId: 'test',
+    });
+    const turn = await client.submitAction(start.sessionId, { id: 'Action 1' }, {
+      pollIntervalMs: 0,
+      maxPollAttempts: 1,
+      submissionId: 'request-1',
+    });
+    expect(turn.turnNumber).toBe(1);
+
+    const [, submitCall, pollCall] = calls;
+    expect(submitCall?.[0]).toBe('https://example.test/v1/sessions/s1/actions');
+    const init = submitCall?.[1];
+    if (!init) throw new Error('missing submit request');
+    expect(JSON.parse(String(init.body))).toEqual({
+      protocol: 'agilabs.turns',
+      protocolVersion: '1.0',
+      sessionId: 's1',
+      turnId: 's1:0',
+      revision: 0,
+      participantId: 'player',
+      submissionId: 'request-1',
+      command: { id: 'Action 1' },
+    });
+    expect(pollCall?.[0]).toBe('https://example.test/v1/sessions/s1/turn');
+  });
+
+  it('preserves stable conflict codes on API errors', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
+      error: 'expected a newer cursor',
+      code: 'stale_turn',
+    }), { status: 409 })));
+    const client = new ArenaClient('https://example.test');
+    await expect(client.getTurnEnvelope('s1')).rejects.toMatchObject({
+      status: 409,
+      code: 'stale_turn',
+    });
+  });
+
+  it('exposes the structured active ticket from a matchmaking conflict', async () => {
+    vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
+      error: 'profile already has an active Arena ticket',
+      queueId: 'global.open',
+      ticket: {
+        ticketId: 'prior_request', state: 'matching', joinedAt: 1, expiresAt: 10_000,
+        mapId: 'arena-s1-1', teamId: 'playerbot-mica',
+        matchId: '11111111-1111-4111-8111-111111111111', participantId: 'north',
+      },
+    }), { status: 409 })));
+
+    const client = new ArenaClient('https://example.test', 'ak_player');
+    await expect(client.joinArenaQueue({
+      mapId: 'arena-s1-1', teamId: 'playerbot-mica', requestId: 'new_request',
+    })).rejects.toMatchObject({
+      status: 409,
+      ticket: {
+        queueId: 'global.open', ticketId: 'prior_request', state: 'matching',
+        matchId: '11111111-1111-4111-8111-111111111111', participantId: 'north',
+      },
+    });
+  });
+
+  it('discovers hosted Arena maps and game-owned team presets', async () => {
+    const catalog = {
+      maps: [{ id: 'arena-s1-1', gameId: 'arena', version: 1, name: 'Arena Exhibition' }],
+      teams: [{
+        id: 'playerbot-mica', name: 'Playerbot + MICA',
+        members: [{ id: 'playerbot', characterId: 'playerbot', control: 'direct' }],
+      }],
+    };
+    const fetchMock = vi.fn(async (_input: RequestInfo | URL) =>
+      new Response(JSON.stringify(catalog)));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(new ArenaClient('https://example.test').arenaCatalog()).resolves.toEqual(catalog);
+    expect(fetchMock.mock.calls[0]?.[0]).toBe('https://example.test/v1/arena/maps');
+  });
+
+  it('polls matchmaking, plays one simultaneous turn, manages presence, and trusts room outcomes', async () => {
+    const window = createIntentWindow('m1', 0, ['north', 'south']);
+    window.intents.north = {
+      participantId: 'north', submissionId: 'north-0', command: { id: 'Action 1' },
+    };
+    const resolvedTurn = turnEnvelope('m1', 1, { ...TURN, turnNumber: 1 });
+    const activeRoom = {
+      matchId: 'm1', sessionId: 'm1', status: 'active', participantId: 'north',
+      readyDeadline: 120_000, turnDeadline: 30_000, expiresAt: null, outcome: null,
+      participants: [
+        { participantId: 'north', claimed: true, connected: true, reconnectDeadline: null },
+        { participantId: 'south', claimed: true, connected: true, reconnectDeadline: null },
+      ],
+      turn: turnEnvelope('m1', 0, TURN),
+    };
+    const disconnectedRoom = {
+      ...activeRoom,
+      participants: [
+        { participantId: 'north', claimed: true, connected: false, reconnectDeadline: 20_000 },
+        { participantId: 'south', claimed: true, connected: true, reconnectDeadline: null },
+      ],
+      turn: resolvedTurn,
+    };
+    const completedRoom = {
+      ...disconnectedRoom,
+      status: 'completed',
+      outcome: { winner: 'north', loser: 'south', reason: 'disconnect' },
+      // Disconnect policy can finish the room while its last game turn is live.
+      turn: resolvedTurn,
+    };
+    const responses = [
+      new Response(JSON.stringify({
+        queueId: 'global.open', ticketId: 'request_1', state: 'waiting',
+        joinedAt: 0, expiresAt: 1, mapId: 'arena-s1-1', teamId: 'playerbot-mica',
+        matchId: null, participantId: null,
+      }), { status: 202 }),
+      new Response(JSON.stringify({
+        queueId: 'global.open', ticketId: 'request_1', state: 'matched',
+        joinedAt: 0, expiresAt: 1, mapId: 'arena-s1-1', teamId: 'playerbot-mica',
+        matchId: 'm1', participantId: 'north',
+      })),
+      new Response(JSON.stringify(activeRoom)),
+      new Response(JSON.stringify(pendingEnvelope(window, TURN, 'north')), { status: 202 }),
+      new Response(JSON.stringify(resolvedTurn)),
+      new Response(JSON.stringify({ ...activeRoom, turn: resolvedTurn })),
+      new Response(JSON.stringify(disconnectedRoom)),
+      new Response(JSON.stringify(completedRoom)),
+    ];
+    const calls: Array<[RequestInfo | URL, RequestInit | undefined]> = [];
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      calls.push([input, init]);
+      return responses.shift()!;
+    }));
+
+    const client = new ArenaClient('https://example.test', 'ak_player');
+    await client.joinArenaQueue({
+      mapId: 'arena-s1-1', teamId: 'playerbot-mica', requestId: 'request_1',
+    });
+    const ticket = await client.arenaQueueTicket('global.open', 'request_1');
+    expect(ticket).toMatchObject({ state: 'matched', matchId: 'm1', participantId: 'north' });
+    await client.connectArenaMatch('m1');
+    const pending = await client.submitArenaIntent('m1', { id: 'Action 1' }, {
+      submissionId: 'north-0',
+    });
+    expect(pending.kind).toBe('pending');
+    const resolved = await client.getArenaTurnEnvelope('m1');
+    expect(resolved).toMatchObject({ kind: 'turn', revision: 1 });
+    await client.heartbeatArenaMatch('m1');
+    const disconnected = await client.disconnectArenaMatch('m1');
+    expect(disconnected.participants[0]).toMatchObject({ connected: false, reconnectDeadline: 20_000 });
+    const completed = await client.getArenaRoom('m1');
+    expect(completed.outcome).toMatchObject({ winner: 'north', reason: 'disconnect' });
+    expect(completed.turn.turn.status).toBe('playing');
+
+    expect(calls.map(([url]) => url)).toEqual([
+      'https://example.test/v1/arena/matchmaking',
+      'https://example.test/v1/arena/matchmaking/global.open/request_1',
+      'https://example.test/v1/arena/matches/m1/presence',
+      'https://example.test/v1/arena/matches/m1/actions',
+      'https://example.test/v1/arena/matches/m1/turn',
+      'https://example.test/v1/arena/matches/m1/presence',
+      'https://example.test/v1/arena/matches/m1/presence',
+      'https://example.test/v1/arena/matches/m1',
+    ]);
+    expect(JSON.parse(String(calls[3]![1]!.body))).toMatchObject({
+      sessionId: 'm1', participantId: 'north', turnId: 'm1:0', revision: 0,
+      submissionId: 'north-0', command: { id: 'Action 1' },
+      extensions: { 'agilabs.arena': { controlRevision: 0 } },
+    });
+    expect(JSON.parse(String(calls[0]![1]!.body))).toEqual({
+      mapId: 'arena-s1-1', teamId: 'playerbot-mica', requestId: 'request_1',
+    });
+    expect(JSON.parse(String(calls[2]![1]!.body))).toEqual({ connected: true });
+    expect(JSON.parse(String(calls[5]![1]!.body))).toEqual({ connected: true });
+    expect(JSON.parse(String(calls[6]![1]!.body))).toEqual({ connected: false });
+    for (const [, init] of calls) {
+      expect((init?.headers as Record<string, string>).authorization).toBe('Bearer ak_player');
+    }
+  });
+
+  it('cancels a waiting matchmaking ticket', async () => {
+    const waiting = {
+      queueId: 'global.open', ticketId: 'request_2', state: 'waiting',
+      joinedAt: 0, expiresAt: 1, mapId: 'arena-s1-1', teamId: 'fixer-overseer',
+      matchId: null, participantId: null,
+    };
+    const responses = [
+      new Response(JSON.stringify(waiting), { status: 202 }),
+      new Response(JSON.stringify({ ...waiting, state: 'cancelled' })),
+    ];
+    const calls: Array<[RequestInfo | URL, RequestInit | undefined]> = [];
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      calls.push([input, init]);
+      return responses.shift()!;
+    }));
+
+    const client = new ArenaClient('https://example.test', 'ak_player');
+    await client.joinArenaQueue({
+      mapId: 'arena-s1-1', teamId: 'fixer-overseer', requestId: 'request_2',
+    });
+    await expect(client.cancelArenaQueueTicket('global.open', 'request_2'))
+      .resolves.toMatchObject({ state: 'cancelled' });
+    expect(calls[1]).toMatchObject([
+      'https://example.test/v1/arena/matchmaking/global.open/request_2',
+      { method: 'DELETE' },
+    ]);
+  });
+
+  it('recovers the authenticated seat after polling a turn before the room', async () => {
+    const turn = turnEnvelope('m1', 0, TURN);
+    const room = {
+      matchId: 'm1', sessionId: 'm1', status: 'active', participantId: 'south',
+      readyDeadline: 120_000, turnDeadline: 30_000, expiresAt: null, outcome: null,
+      participants: [
+        { participantId: 'north', claimed: true, connected: true, reconnectDeadline: null },
+        { participantId: 'south', claimed: true, connected: true, reconnectDeadline: null },
+      ],
+      turn,
+    };
+    const window = createIntentWindow('m1', 0, ['north', 'south']);
+    window.intents.south = {
+      participantId: 'south', submissionId: 'south-0', command: { id: 'Action 8' },
+    };
+    const responses = [
+      new Response(JSON.stringify(turn)),
+      new Response(JSON.stringify(room)),
+      new Response(JSON.stringify(pendingEnvelope(window, TURN, 'south')), { status: 202 }),
+    ];
+    const calls: Array<[RequestInfo | URL, RequestInit | undefined]> = [];
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      calls.push([input, init]);
+      return responses.shift()!;
+    }));
+
+    const client = new ArenaClient('https://example.test', 'ak_player');
+    await client.getArenaTurnEnvelope('m1');
+    await client.submitArenaIntent('m1', { id: 'Action 8' }, { submissionId: 'south-0' });
+
+    expect(calls.map(([url]) => url)).toEqual([
+      'https://example.test/v1/arena/matches/m1/turn',
+      'https://example.test/v1/arena/matches/m1',
+      'https://example.test/v1/arena/matches/m1/actions',
+    ]);
+    expect(JSON.parse(String(calls[2]![1]!.body))).toMatchObject({ participantId: 'south' });
+  });
+
+  it('tracks same-world Arena control substeps and generates a fresh retry key for each', async () => {
+    const activeRoom = {
+      matchId: 'm1', sessionId: 'm1', status: 'active', participantId: 'north',
+      readyDeadline: 120_000, turnDeadline: 30_000, expiresAt: null, outcome: null,
+      participants: [
+        { participantId: 'north', claimed: true, connected: true, reconnectDeadline: null },
+        { participantId: 'south', claimed: true, connected: true, reconnectDeadline: null },
+      ],
+      turn: turnEnvelope('m1', 0, TURN),
+    };
+    const responses = [
+      new Response(JSON.stringify(activeRoom)),
+      new Response(JSON.stringify(turnEnvelope('m1', 0, { ...TURN, controlRevision: 1 }))),
+      new Response(JSON.stringify(turnEnvelope('m1', 0, { ...TURN, controlRevision: 2 }))),
+    ];
+    const calls: Array<[RequestInfo | URL, RequestInit | undefined]> = [];
+    vi.stubGlobal('fetch', vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      calls.push([input, init]);
+      return responses.shift()!;
+    }));
+
+    const client = new ArenaClient('https://example.test', 'ak_player');
+    await client.connectArenaMatch('m1');
+    await client.submitArenaIntent('m1', { id: 'Action 6' });
+    await client.submitArenaIntent('m1', { id: 'Action 7', index: 0 });
+
+    expect(JSON.parse(String(calls[1]![1]!.body))).toMatchObject({
+      turnId: 'm1:0', revision: 0,
+      submissionId: 'north:m1:0:control:0',
+      extensions: { 'agilabs.arena': { controlRevision: 0 } },
+    });
+    expect(JSON.parse(String(calls[2]![1]!.body))).toMatchObject({
+      turnId: 'm1:0', revision: 0,
+      submissionId: 'north:m1:0:control:1',
+      extensions: { 'agilabs.arena': { controlRevision: 1 } },
+    });
+  });
+});
