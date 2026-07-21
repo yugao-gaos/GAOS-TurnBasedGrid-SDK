@@ -20,6 +20,11 @@ The SDK owns deterministic, product-neutral behavior:
   chains, rotations, swaps, and priority;
 - deterministic multi-wave turn settlement through an explicit consequence
   worklist, including convergence guards, next-turn deferral, and causal traces;
+- breadth-first chain reactions, path-projectile advancement, bounded full-flight
+  passes, and all-or-nothing push-chain planning/commit ordering;
+- ordered arrival-rule dispatch, neutral multi-resource claim arbitration,
+  directed transport proposals/runs, connected link sources, and bounded
+  transport/state interlocks;
 - shortest cardinal pathfinding, Bresenham traversal, line-of-sight checks, and
   widening cone geometry through injected board/blocker policies;
 - seeded random draws and permutations;
@@ -47,6 +52,38 @@ returns control to the caller.
 Geometry APIs accept callbacks for cell existence and blocking. The SDK owns
 the algorithm; the product retains its terrain tokens, traversal capabilities,
 projectile collision effects, and visibility policy.
+
+## Reusable mechanisms
+
+The engine subpath ships mechanisms directly. Products inject world access and
+effects instead of copying their control flow:
+
+```ts
+import {
+  advancePathProjectiles,
+  arbitrateResourceClaims,
+  commitPushChain,
+  planPushChain,
+  proposeDirectedTransport,
+  resolveArrival,
+  resolveChainReaction,
+  resolveFlightPasses,
+  resolveInterlock,
+  resolveTransportRun,
+} from '@yugao-gaos/turn-based-grid-sdk/engine';
+```
+
+These functions do not assign meaning to tokens. For example,
+`resolveChainReaction` guarantees breadth-first, once-per-identity propagation;
+the product decides what a node represents, which effects it applies, and which
+neighboring nodes it triggers. `advancePathProjectiles` owns one-cell travel
+semantics while the product supplies collision decisions and commits damage,
+landing, removal, and presentation events.
+
+`planPushChain` is mutation-free. `commitPushChain` then writes farthest-first
+and emits arrivals nearest-first, preventing overwrites while retaining causal
+animation order. Transport similarly separates reusable directed proposals and
+bounded run/interlock behavior from product occupancy, power, and terrain rules.
 
 ## Reducer adapter
 
