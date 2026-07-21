@@ -21,6 +21,10 @@
     "./agent": {
       "types": "./dist/agent/index.d.ts",
       "import": "./dist/agent/index.js"
+    },
+    "./agent-cli": {
+      "types": "./dist/agent-cli/index.d.ts",
+      "import": "./dist/agent-cli/index.js"
     }
   },
   "files": [
@@ -46,6 +50,7 @@
     "registry": "https://npm.pkg.github.com"
   },
   "devDependencies": {
+    "@types/node": "^22.20.1",
     "typescript": "^5.5.4",
     "vitest": "^3.2.7"
   }
