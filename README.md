@@ -1,6 +1,11 @@
-# GAOS Turn-Based Grid SDK
+# GAOS Turn-Based Grid Toolkit
 
-An AI-native SDK for deterministic, turn-based grid environments. It provides
+GAOS stands for **Game Agentic Open SDK**.
+
+**Deterministic grid mechanics and multiplayer infrastructure for agent-ready
+games.**
+
+This AI-native toolkit provides
 TypeScript and Python clients for games hosted through the GAOS turn protocol,
 plus a reusable TypeScript engine and provider-neutral agent runtime. The
 repository contains six layers:
