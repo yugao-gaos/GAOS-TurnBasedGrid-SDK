@@ -3,8 +3,8 @@ layout: home
 
 hero:
   name: GAOS Turn-Based Grid Toolkit
-  text: Game AGI Open SDK
-  tagline: Deterministic grid mechanics and multiplayer infrastructure for agent-ready games.
+  text: Gaming AGI Open SDK
+  tagline: Games as benchmarks for human and AI agents.
   actions:
     - theme: brand
       text: Start building
@@ -21,6 +21,8 @@ features:
   - title: Product-neutral mechanisms
     details: The SDK owns how reusable mechanics behave. Your product retains characters, levels, objectives, tuning, authentication, and presentation.
 ---
+
+**Deterministic grid mechanics and multiplayer infrastructure for agent-ready games.**
 
 ## One reducer, every way to play
 
