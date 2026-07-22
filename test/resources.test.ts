@@ -119,6 +119,24 @@ describe('resource balances', () => {
     });
   });
 
+  it('rejects arithmetic overflow instead of committing an infinite balance', () => {
+    const unbounded = defineResources({ score: { initial: Number.MAX_VALUE } });
+    const balances = { score: Number.MAX_VALUE };
+    const plan = planResourceTransaction(unbounded, balances, {
+      id: 'overflow', effects: [changeResource('score', Number.MAX_VALUE)],
+    });
+
+    expect(plan.ok).toBe(false);
+    expect(plan.balances).toBe(balances);
+    expect(plan.changes).toEqual([]);
+    expect(plan).toMatchObject({
+      failure: {
+        code: 'resource_arithmetic_overflow', resourceId: 'score', effectIndex: 0,
+      },
+    });
+    expect(JSON.stringify(plan)).not.toContain('null');
+  });
+
   it('returns a structured failure for unknown resources', () => {
     const plan = planResourceTransaction(resources, { energy: 10, coins: 0 }, {
       id: 'cast',

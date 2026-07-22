@@ -25,6 +25,7 @@ ARENA_CONTROL_EXTENSION = "agilabs.arena"
 PARTICIPANT_ID_PATTERN = r"^[A-Za-z0-9_.:@-]{1,128}$"
 _PARTICIPANT_ID_RE = re.compile(PARTICIPANT_ID_PATTERN)
 _MAX_SAFE_INTEGER = 9_007_199_254_740_991
+_MAX_FINITE_NUMBER = float.fromhex("0x1.fffffffffffffp+1023")
 _ARENA_ROOM_STATUSES = {"connecting", "active", "completed", "expired"}
 _ARENA_OUTCOME_REASONS = {"game", "disconnect", "idle", "abandoned"}
 
@@ -56,7 +57,11 @@ def _validate_json(value: Any, label: str = "value", active: set[int] | None = N
     active = set() if active is None else active
     if value is None or isinstance(value, (str, bool)):
         return
-    if isinstance(value, (int, float)) and not isinstance(value, bool):
+    if isinstance(value, int) and not isinstance(value, bool):
+        if abs(value) > _MAX_FINITE_NUMBER:
+            raise ProtocolMismatchError(f"{label} must contain only finite numbers")
+        return
+    if isinstance(value, float):
         if not math.isfinite(value):
             raise ProtocolMismatchError(f"{label} must contain only finite numbers")
         return
@@ -77,6 +82,27 @@ def _validate_json(value: Any, label: str = "value", active: set[int] | None = N
                 _validate_json(item, f"{label}.{key}", active)
     finally:
         active.remove(identity)
+
+
+def _reject_json_constant(value: str) -> None:
+    raise ValueError(f"non-finite JSON number {value}")
+
+
+def _json_loads(value: bytes | str, label: str) -> Any:
+    try:
+        parsed = json.loads(value, parse_constant=_reject_json_constant)
+    except (json.JSONDecodeError, UnicodeDecodeError, ValueError, OverflowError) as error:
+        raise ProtocolMismatchError(f"{label} is not valid JSON") from error
+    _validate_json(parsed, label)
+    return parsed
+
+
+def _json_dumps(value: Any, label: str) -> str:
+    _validate_json(value, label)
+    try:
+        return json.dumps(value, allow_nan=False)
+    except (TypeError, ValueError, OverflowError) as error:
+        raise ProtocolMismatchError(f"{label} is not valid JSON") from error
 
 
 def parse_session_binding(value: Any) -> dict[str, Any]:
@@ -292,6 +318,7 @@ class ArenaClient:
         """Restore a persisted binding before issuing an exact retry."""
         binding = parse_session_binding(value)
         self._bindings[binding["sessionId"]] = binding
+        self._observed_arena_cursors.pop(binding["sessionId"], None)
         return dict(binding)
 
     def _read_body(self, response: Any) -> bytes:
@@ -309,18 +336,13 @@ class ArenaClient:
         req = urllib.request.Request(
             self.base_url + path,
             method=method,
-            data=json.dumps(body).encode() if body is not None else None,
+            data=_json_dumps(body, "request body").encode() if body is not None else None,
             headers=headers,
         )
         try:
             with urllib.request.urlopen(req, timeout=self.timeout) as resp:
                 raw_body = self._read_body(resp)
-                try:
-                    return json.loads(raw_body)
-                except (json.JSONDecodeError, UnicodeDecodeError) as error:
-                    raise ProtocolMismatchError(
-                        "successful HTTP response is not valid JSON"
-                    ) from error
+                return _json_loads(raw_body, "successful HTTP response")
         except urllib.error.HTTPError as e:
             try:
                 raw_body = self._read_body(e).decode("utf-8", errors="replace")
@@ -330,7 +352,7 @@ class ArenaClient:
                     f"HTTP error response exceeds {self.max_response_bytes} bytes",
                 ) from None
             try:
-                payload = json.loads(raw_body)
+                payload = _json_loads(raw_body, "HTTP error response")
                 error = payload.get("error", str(e))
                 code = payload.get("code") if isinstance(payload.get("code"), str) else None
             except Exception:
@@ -733,9 +755,17 @@ class AsyncArenaClient:
 
     async def _run(self, name: str, *args: Any, **kwargs: Any) -> Any:
         async with self._lock:
-            return await asyncio.to_thread(
+            worker = asyncio.create_task(asyncio.to_thread(
                 getattr(self.sync_client, name), *args, **kwargs
-            )
+            ))
+            try:
+                return await asyncio.shield(worker)
+            except asyncio.CancelledError:
+                try:
+                    await worker
+                except Exception:
+                    pass
+                raise
 
     async def create_session(self, *args: Any, **kwargs: Any) -> tuple[str, Turn]:
         return await self._run("create_session", *args, **kwargs)

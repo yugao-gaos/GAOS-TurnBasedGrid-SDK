@@ -69,18 +69,18 @@ export function resolveMoves(
   if (new Set(movers.map((mover) => mover.id)).size !== movers.length) {
     throw new TypeError('mover ids must be unique');
   }
-  const ids = movers.map((mover) => mover.id);
-  const byId = new Map(movers.map((mover) => [mover.id, mover]));
-  const current = new Map<string, Cell>(movers.map((mover) => [mover.id, mover.from]));
-  const destination = new Map<string, Cell>(movers.map((mover) => [mover.id, mover.to]));
-  const priorities = new Map<string, number>(movers.map((mover) => [mover.id, mover.priority]));
+  const ids = movers.map((mover) => mover.id).sort();
+  const sourceById = new Map(movers.map((mover) => [mover.id, mover]));
+  const byId = new Map(ids.map((id) => [id, sourceById.get(id)!]));
+  const current = new Map<string, Cell>(ids.map((id) => [id, byId.get(id)!.from]));
+  const destination = new Map<string, Cell>(ids.map((id) => [id, byId.get(id)!.to]));
+  const priorities = new Map<string, number>(ids.map((id) => [id, byId.get(id)!.priority]));
   const moving = (id: string): boolean => !same(destination.get(id)!, current.get(id)!);
   const revert = (id: string): Map<string, Cell> => destination.set(id, current.get(id)!);
 
-  let changed = true;
-  while (changed) {
-    changed = false;
+  while (true) {
     const stayers = ids.filter((id) => !moving(id));
+    const toRevert = new Set<string>();
     for (const id of ids) {
       if (!moving(id)) continue;
       const mover = byId.get(id)!;
@@ -93,11 +93,18 @@ export function resolveMoves(
           return overlaps(targetCells, cellsAt(other, current.get(otherId)!));
         })
       ) {
-        revert(id);
-        changed = true;
-        continue;
+        toRevert.add(id);
       }
+    }
+    if (toRevert.size > 0) {
+      for (const id of toRevert) revert(id);
+      continue;
+    }
 
+    for (const id of ids) {
+      if (!moving(id)) continue;
+      const mover = byId.get(id)!;
+      const targetCells = cellsAt(mover, destination.get(id)!);
       const swap = ids.find((otherId) => {
         if (otherId === id || !moving(otherId)) return false;
         const other = byId.get(otherId)!;
@@ -108,13 +115,20 @@ export function resolveMoves(
         const consented = mover.swapOk?.includes(swap)
           || byId.get(swap)?.swapOk?.includes(id);
         if (!consented) {
-          revert(id);
-          revert(swap);
-          changed = true;
-          continue;
+          toRevert.add(id);
+          toRevert.add(swap);
         }
       }
+    }
+    if (toRevert.size > 0) {
+      for (const id of toRevert) revert(id);
+      continue;
+    }
 
+    for (const id of ids) {
+      if (!moving(id)) continue;
+      const mover = byId.get(id)!;
+      const targetCells = cellsAt(mover, destination.get(id)!);
       const rivals = ids.filter((otherId) => {
         if (otherId === id || !moving(otherId)) return false;
         const other = byId.get(otherId)!;
@@ -127,11 +141,12 @@ export function resolveMoves(
           return priorityDelta < 0 || (priorityDelta === 0 && a <= b) ? a : b;
         });
         for (const member of group) {
-          if (member !== winner) revert(member);
+          if (member !== winner) toRevert.add(member);
         }
-        changed = true;
       }
     }
+    if (toRevert.size === 0) break;
+    for (const id of toRevert) revert(id);
   }
 
   return destination;

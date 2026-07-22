@@ -235,6 +235,21 @@ def test_normalizes_non_json_success_and_caps_response_bytes(monkeypatch):
         ArenaClient(max_response_bytes=0)
 
 
+def test_rejects_non_finite_and_huge_json_numbers_portably(monkeypatch):
+    for payload in (b"NaN", b"Infinity", b"1e1000000", b"1" * 5000):
+        monkeypatch.setattr(
+            "urllib.request.urlopen", lambda *_args, value=payload, **_kwargs: io.BytesIO(value)
+        )
+        with pytest.raises(ProtocolMismatchError):
+            ArenaClient("https://example.test").arena_catalog()
+
+    client = ArenaClient("https://example.test")
+    with pytest.raises(ProtocolMismatchError, match="finite"):
+        client._call("POST", "/test", {"bad": float("nan")})
+    with pytest.raises(ProtocolMismatchError, match="finite"):
+        client._call("POST", "/test", {"bad": 10**400})
+
+
 def test_async_client_runs_sync_requests_off_the_event_loop():
     client = AsyncArenaClient("https://example.test")
     client.sync_client.get_turn_envelope = lambda session_id: {"sessionId": session_id}  # type: ignore[method-assign]
@@ -264,6 +279,34 @@ def test_async_client_serializes_mutable_binding_operations():
         )
 
     assert asyncio.run(run_both()) == [{"sessionId": "s1"}, {"sessionId": "s2"}]
+    assert maximum == 1
+
+
+def test_async_client_keeps_serialization_after_cancellation():
+    client = AsyncArenaClient("https://example.test")
+    active = 0
+    maximum = 0
+
+    def fake_get(session_id):
+        nonlocal active, maximum
+        active += 1
+        maximum = max(maximum, active)
+        time.sleep(0.03)
+        active -= 1
+        return {"sessionId": session_id}
+
+    client.sync_client.get_turn_envelope = fake_get  # type: ignore[method-assign]
+
+    async def cancel_then_call():
+        first = asyncio.create_task(client.get_turn_envelope("s1"))
+        await asyncio.sleep(0.005)
+        first.cancel()
+        second = asyncio.create_task(client.get_turn_envelope("s2"))
+        with pytest.raises(asyncio.CancelledError):
+            await first
+        assert await second == {"sessionId": "s2"}
+
+    asyncio.run(cancel_then_call())
     assert maximum == 1
 
 
@@ -597,6 +640,34 @@ def test_persists_and_restores_original_binding_for_exact_retry():
     assert calls[0][2]["revision"] == 0
     with pytest.raises(ProtocolMismatchError):
         client.restore_session_binding({**binding, "revision": -1})
+
+
+def test_restored_arena_binding_overrides_observed_cursor_for_retry():
+    calls = []
+    client = ArenaClient("https://example.test")
+
+    def fake_call(method, path, body=None):
+        calls.append((method, path, body))
+        result = envelope(revision=5 if len(calls) == 1 else 1)
+        result["sessionId"] = "m1"
+        result["turnId"] = "m1:5" if len(calls) == 1 else "m1:1"
+        result["turn"] = {**TURN, "controlRevision": 5 if len(calls) == 1 else 1}
+        return result
+
+    client._call = fake_call  # type: ignore[method-assign]
+    client.get_arena_turn_envelope("m1")
+    client.restore_session_binding({
+        "protocol": "agilabs.turns", "protocolVersion": "1.0",
+        "sessionId": "m1", "turnId": "m1:0", "revision": 0,
+        "participantId": "north", "controlRevision": 0,
+    })
+    client.submit_arena_intent("m1", {"id": "Action 1"}, submission_id="retry-0")
+
+    assert calls[1][2]["turnId"] == "m1:0"
+    assert calls[1][2]["revision"] == 0
+    assert calls[1][2]["extensions"] == {
+        "agilabs.arena": {"controlRevision": 0}
+    }
 
 
 def test_explicit_retry_key_never_fetches_a_newer_cursor():

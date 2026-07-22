@@ -43,13 +43,24 @@ export function recheckGridTranscript<TLevel, TState, TView extends GridTurnView
     && new Set(permutation).size === permutationLength;
   if (!validPermutation) problems.push('perm must be a complete bijection over its declared length');
 
-  const sequenceBase = actions.length > 0 && (actions[0]?.n === 0 || actions[0]?.n === 1)
-    ? actions[0].n
+  const actionValues: unknown[] = Array.isArray(actions) ? actions : [];
+  if (!Array.isArray(actions)) problems.push('actions must be an array');
+  const firstAction = actionValues[0];
+  const firstNumber = firstAction && typeof firstAction === 'object' && !Array.isArray(firstAction)
+    ? (firstAction as Record<string, unknown>)['n']
     : undefined;
-  if (actions.length > 0 && sequenceBase === undefined) {
+  const sequenceBase = firstNumber === 0 || firstNumber === 1
+    ? firstNumber
+    : undefined;
+  if (actionValues.length > 0 && sequenceBase === undefined) {
     problems.push('action numbering must start at 0 or 1');
   }
-  const parsedActions = actions.map((action, offset) => {
+  const parsedActions = actionValues.map((value, offset) => {
+    if (!value || typeof value !== 'object' || Array.isArray(value)) {
+      problems.push(`action at index ${offset} must be an object`);
+      return { action: undefined, valid: false };
+    }
+    const action = value as Partial<GridTranscriptAction>;
     if (!Number.isSafeInteger(action.n) || sequenceBase === undefined || action.n !== sequenceBase + offset) {
       problems.push(`action at index ${offset} has non-contiguous sequence number ${String(action.n)}`);
     }
@@ -79,7 +90,7 @@ export function recheckGridTranscript<TLevel, TState, TView extends GridTurnView
         `action ${action.n}: wire ${action.wireId} → ${action.canonicalId} contradicts the session permutation`,
       );
     }
-    return { action, valid: wire !== undefined && canonical !== undefined
+    return { action: action as GridTranscriptAction, valid: wire !== undefined && canonical !== undefined
       && ['x', 'y', 'index'].every((field) => (
         action[field as 'x' | 'y' | 'index'] === undefined
         || Number.isSafeInteger(action[field as 'x' | 'y' | 'index'])
@@ -89,6 +100,7 @@ export function recheckGridTranscript<TLevel, TState, TView extends GridTurnView
   let state = reducer.init(header.level, validSeed ? header.seed : 0);
   let replayError: string | null = null;
   for (const { action, valid } of parsedActions) {
+    if (!action) continue;
     if (reducer.view(state).status !== 'playing') {
       problems.push(`action ${action.n} appears after terminal state`);
       break;
