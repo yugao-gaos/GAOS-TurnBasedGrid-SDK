@@ -43,4 +43,4 @@ __all__ = [
     "parse_turn_result",
     "parse_session_binding",
 ]
-__version__ = "0.11.0"
+__version__ = "0.12.0"
