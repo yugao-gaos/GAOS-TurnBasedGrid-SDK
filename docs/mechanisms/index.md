@@ -41,6 +41,7 @@ the [settlement kernel](/settlement).
 | [Push chains](push-chains.md) | Mutation-free planning and safe commit order |
 | [Arrival rules](arrivals.md) | Stable dispatch of tile-entry effects |
 | [Resource claims](resource-claims.md) | Neutral all-fail arbitration for contested resources |
+| [Resource transactions](resources.md) | Product-defined balances and atomic requirements/effects |
 | [Gates](gates.md) | Latching and occupancy-safe automatic transitions |
 | [Latched triggers](triggers.md) | Authored-order, one-shot conditions and effects |
 | [Rays](rays.md) | Ordered traversal with explicit stop or exhaustion |

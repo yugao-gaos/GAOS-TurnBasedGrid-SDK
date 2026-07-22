@@ -3,6 +3,17 @@ export interface StarThresholds {
   two: number;
 }
 
+export interface AIActionLimitUsage {
+  actionsUsed: number;
+  maxActions: number;
+}
+
+/** A runtime guardrail, independent of product-defined resource costs. */
+export function aiActionLimitExceeded(usage: AIActionLimitUsage): boolean {
+  return usage.actionsUsed >= usage.maxActions;
+}
+
+/** @deprecated Model energy with the resource transaction APIs instead. */
 export interface BudgetUsage {
   actionsUsed: number;
   maxActions: number;
@@ -10,6 +21,7 @@ export interface BudgetUsage {
   energyCap: number;
 }
 
+/** @deprecated Use aiActionLimitExceeded and product-defined resources instead. */
 export type BudgetFailure = 'out_of_energy' | 'out_of_action_budget';
 
 /** Score a completed run from product-supplied action thresholds. */
@@ -20,8 +32,8 @@ export function scoreStars(actionsUsed: number, thresholds: StarThresholds): 1 |
 }
 
 /**
- * Return the generic budget failure, preserving Energy-before-ActionBudget
- * precedence when both are exhausted on the same turn.
+ * @deprecated Use aiActionLimitExceeded and product-defined resources instead.
+ * Preserves Energy-before-ActionBudget precedence for existing consumers.
  */
 export function budgetFailure(usage: BudgetUsage): BudgetFailure | null {
   if (usage.energyUsed >= usage.energyCap) return 'out_of_energy';

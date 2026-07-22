@@ -89,9 +89,28 @@ export {
   seededPermutation,
 } from './random.js';
 export {
+  changeResource,
+  commitResourceTransaction,
+  defineResources,
+  initializeResourceBalances,
+  planResourceTransaction,
+  resourceAtLeast,
+  type ResourceBalances,
+  type ResourceChange,
+  type ResourceDefinition,
+  type ResourceDefinitions,
+  type ResourceDeltaEffect,
+  type ResourceMinimumRequirement,
+  type ResourceTransaction,
+  type ResourceTransactionFailure,
+  type ResourceTransactionPlan,
+} from './resources.js';
+export {
+  aiActionLimitExceeded,
   budgetFailure,
   scoreStars,
   suggestStarThresholds,
+  type AIActionLimitUsage,
   type BudgetFailure,
   type BudgetUsage,
   type StarThresholds,

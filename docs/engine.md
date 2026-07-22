@@ -33,11 +33,12 @@ The SDK owns deterministic, product-neutral behavior:
   schemas, conditions, actions, and world state;
 - ordered arrival-rule dispatch, neutral multi-resource claim arbitration,
   directed transport proposals/runs, connected link sources, and bounded
-  transport/state interlocks;
+  transport/state interlocks, plus product-defined resource balances and atomic
+  requirement/effect transactions;
 - shortest cardinal pathfinding, Bresenham traversal, line-of-sight checks, and
   widening cone geometry through injected board/blocker policies;
 - seeded random draws and permutations;
-- star scoring and Energy/ActionBudget failure ordering;
+- star scoring and an AI action-limit runtime guardrail;
 - breadth-first minimum-action solving over an injected deterministic reducer;
 - transcript re-simulation and deterministic per-level run seeds.
 - provider-neutral agent episode lifecycle, concrete action validation,
@@ -159,5 +160,6 @@ The scoring formula lives here, but the numbers do not:
 scoreStars(actionsUsed, { three: level.stars.three, two: level.stars.two });
 ```
 
-Likewise, the SDK defines budget-failure precedence while the product supplies
-the ActionBudget and Energy caps.
+AI action limits are runtime guardrails independent of product economy. Products
+define resources such as energy and compose their costs or grants into actions,
+triggers, pickups, and other mechanisms through [resource transactions](mechanisms/resources.md).

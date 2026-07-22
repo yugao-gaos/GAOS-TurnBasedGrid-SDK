@@ -83,6 +83,7 @@ export default defineConfig({
           { text: 'Push chains', link: '/mechanisms/push-chains' },
           { text: 'Arrival rules', link: '/mechanisms/arrivals' },
           { text: 'Resource claims', link: '/mechanisms/resource-claims' },
+          { text: 'Resource transactions', link: '/mechanisms/resources' },
           { text: 'Gates', link: '/mechanisms/gates' },
           { text: 'Latched triggers', link: '/mechanisms/triggers' },
           { text: 'Grid rays', link: '/mechanisms/rays' },
@@ -95,7 +96,7 @@ export default defineConfig({
         items: [
           { text: 'Transport and interlocks', link: '/mechanisms/transport' },
           { text: 'Deterministic randomness', link: '/mechanisms/randomness' },
-          { text: 'Scoring and budgets', link: '/mechanisms/scoring' },
+          { text: 'Scoring and AI action limits', link: '/mechanisms/scoring' },
           { text: 'Solver', link: '/mechanisms/solver' },
           { text: 'Replay verification', link: '/mechanisms/replay' },
         ],
