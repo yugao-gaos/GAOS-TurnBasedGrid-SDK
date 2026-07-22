@@ -3,7 +3,8 @@
   "git_user": "yugao-gaos <yu.gao@gaos.ca>",
   "session_id": "019f8abf-e5aa-7372-ad69-342b9ff7c60d",
   "branch": "orch/attempt/codex-release-hardened-sdk-v0-12-0",
-  "status": "claimed",
+  "status": "tested",
   "claimed_at": "2026-07-22T22:16:47.171Z",
-  "lease_until": "2026-07-22T23:16:47.171Z"
+  "lease_until": "2026-07-22T23:16:47.171Z",
+  "completed_at": "2026-07-22T22:19:02.615Z"
 }
