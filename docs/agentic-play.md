@@ -87,6 +87,7 @@ const driver = createKeyedAgentDriver('anthropic', {
   model: 'your-model-id',
   maxHistoryTurns: 8,
   maxRetries: 2,
+  timeoutMs: 30_000,
 });
 
 const registry = new AgentDriverRegistry([driver]);
@@ -103,7 +104,10 @@ registries can add or replace definitions without changing the episode loop.
 Provider calls use `fetch`, so tests can inject an offline implementation.
 Completed conversation history is bounded (eight turns by default), and HTTP
 429/5xx responses receive two abortable exponential-backoff retries. Both
-limits and the delay implementation are configurable.
+limits and the delay implementation are configurable. Model requests and API
+key checks have a 30-second deadline by default; `timeoutMs: 0` disables it.
+Caller cancellation, driver interruption, retry waits, and the deadline share
+one abort lifecycle.
 
 Model responses are parsed into the same `GridSubmittedAction` contract and
 must exactly match a concrete legal action before the reducer sees them. API

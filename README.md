@@ -256,6 +256,7 @@ const driver = createKeyedAgentDriver('openai', {
   model: 'your-model-id',
   maxHistoryTurns: 8,
   maxRetries: 2,
+  timeoutMs: 30_000,
 });
 const result = await runAgentDriverEpisode(environment, driver);
 ```

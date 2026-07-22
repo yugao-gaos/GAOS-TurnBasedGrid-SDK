@@ -40,6 +40,8 @@ def test_rejects_unversioned_turn_shape():
         parse_turn_result({**envelope(), "turnId": ""})
     with pytest.raises(ProtocolMismatchError):
         parse_turn_result({**envelope(), "revision": -1})
+    with pytest.raises(ProtocolMismatchError, match="extensions"):
+        parse_turn_result({**envelope(), "extensions": 7})
 
 
 def test_pending_participants_are_unique_disjoint_and_accepted_is_submitted():
@@ -479,3 +481,57 @@ def test_arena_same_world_control_steps_get_distinct_retry_keys():
         client.submit_arena_intent(
             "m1", {"id": "Action 8"}, control_revision=9_007_199_254_740_992
         )
+
+
+def test_persists_and_restores_original_binding_for_exact_retry():
+    calls = []
+    client = ArenaClient("https://example.test")
+    binding = {
+        "protocol": "agilabs.turns",
+        "protocolVersion": "1.0",
+        "sessionId": "s1",
+        "turnId": "s1:0",
+        "revision": 0,
+        "participantId": "player",
+    }
+    assert client.restore_session_binding(binding) == binding
+    assert client.get_session_binding("s1") == binding
+
+    def fake_call(method, path, body=None):
+        calls.append((method, path, body))
+        return envelope(revision=1)
+
+    client._call = fake_call  # type: ignore[method-assign]
+    client.submit_intent("s1", {"id": "Action 1"}, submission_id="retry-revision-0")
+    assert calls[0][2]["turnId"] == "s1:0"
+    assert calls[0][2]["revision"] == 0
+    with pytest.raises(ProtocolMismatchError):
+        client.restore_session_binding({**binding, "revision": -1})
+
+
+def test_explicit_retry_key_never_fetches_a_newer_cursor():
+    client = ArenaClient("https://example.test")
+    called = False
+
+    def fake_call(method, path, body=None):
+        nonlocal called
+        called = True
+        return envelope(revision=1)
+
+    client._call = fake_call  # type: ignore[method-assign]
+    with pytest.raises(ProtocolMismatchError, match="original cursor"):
+        client.submit_intent("s1", {"id": "Action 1"}, submission_id="retry-revision-0")
+    assert called is False
+
+
+def test_python_commands_and_extensions_require_plain_json():
+    with pytest.raises(ProtocolMismatchError, match="finite"):
+        parse_turn_result({**envelope(), "extensions": {"bad": float("nan")}})
+    client = ArenaClient("https://example.test")
+    client.restore_session_binding({
+        "protocol": "agilabs.turns", "protocolVersion": "1.0",
+        "sessionId": "s1", "turnId": "s1:0", "revision": 0,
+        "participantId": "player",
+    })
+    with pytest.raises(ProtocolMismatchError, match="finite"):
+        client.submit_intent("s1", {"bad": float("nan")})

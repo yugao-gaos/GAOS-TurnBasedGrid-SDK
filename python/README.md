@@ -34,6 +34,13 @@ result = client.submit_arena_intent(ticket["matchId"], {"id": "Action 8"})
 client.heartbeat_arena_match(ticket["matchId"])  # at least every five seconds
 ```
 
+For an exact retry after a restart, persist
+`client.get_session_binding(session_id)`, restore it with
+`restore_session_binding(binding)`, and reuse the original `submission_id`.
+`submit_intent(..., cursor=original_cursor)` also accepts an explicit original
+cursor. A fresh client rejects an explicit retry key if it would otherwise
+have to fetch and silently pair it with a newer cursor.
+
 Hosted Arena observations include a seat-local `controlRevision`. The client
 remembers it and automatically sends the `agilabs.arena` extension plus a new
 deterministic submission id for each targeting or conversation substep. A free

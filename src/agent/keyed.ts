@@ -34,6 +34,8 @@ export interface KeyedAgentDriverOptions {
   retryBaseDelayMs?: number;
   /** Optional delay implementation for deterministic harnesses. */
   sleep?: (delayMs: number, signal: AbortSignal) => Promise<void>;
+  /** Complete provider-call deadline. Defaults to 30,000; zero disables it. */
+  timeoutMs?: number;
 }
 
 export interface KeyedProvider {
@@ -43,7 +45,12 @@ export interface KeyedProvider {
   readonly login: string;
   readonly baseUrl: string;
   readonly defaultModel?: string;
-  check(apiKey: string, options?: { fetch?: AgentFetch; signal?: AbortSignal }): Promise<KeyCheck>;
+  check(apiKey: string, options?: {
+    fetch?: AgentFetch;
+    signal?: AbortSignal;
+    /** Defaults to 30,000; zero disables it. */
+    timeoutMs?: number;
+  }): Promise<KeyCheck>;
   createDriver<TObservation = unknown>(options: KeyedAgentDriverOptions): AgentDriver<TObservation>;
 }
 
@@ -212,6 +219,14 @@ function assertNonNegativeInteger(value: number, name: string): void {
   }
 }
 
+function providerSignal(timeoutMs: number, signals: Array<AbortSignal | undefined>): AbortSignal | undefined {
+  assertNonNegativeInteger(timeoutMs, 'timeoutMs');
+  const timeout = timeoutMs > 0 ? AbortSignal.timeout(timeoutMs) : undefined;
+  const present = [...signals, timeout].filter((signal): signal is AbortSignal => signal !== undefined);
+  if (present.length === 0) return undefined;
+  return present.length === 1 ? present[0] : AbortSignal.any(present);
+}
+
 async function requestWithRetries(
   request: AgentFetch,
   url: string,
@@ -220,7 +235,7 @@ async function requestWithRetries(
   options: Required<Pick<KeyedAgentDriverOptions, 'maxRetries' | 'retryBaseDelayMs' | 'sleep'>>,
 ): Promise<Response> {
   for (let attempt = 0; ; attempt++) {
-    const response = await request(url, init);
+    const response = await request(url, { ...init, signal });
     const transient = response.status === 429 || response.status >= 500;
     if (!transient || attempt >= options.maxRetries) return response;
     await response.body?.cancel();
@@ -254,6 +269,7 @@ export class OpenAICompatibleAgentDriver<TObservation = unknown> implements Agen
   private readonly maxTokens: number;
   private readonly maxHistoryTurns: number;
   private readonly retryOptions: Required<Pick<KeyedAgentDriverOptions, 'maxRetries' | 'retryBaseDelayMs' | 'sleep'>>;
+  private readonly timeoutMs: number;
   private readonly history: Array<{ role: 'user' | 'assistant'; content: string }> = [];
   private activeRequest?: AbortController;
 
@@ -269,12 +285,14 @@ export class OpenAICompatibleAgentDriver<TObservation = unknown> implements Agen
     this.baseUrl = (options.baseUrl ?? options.defaultBaseUrl).replace(/\/$/, '');
     this.maxTokens = options.maxTokens ?? 800;
     this.maxHistoryTurns = options.maxHistoryTurns ?? 8;
+    this.timeoutMs = options.timeoutMs ?? 30_000;
     this.retryOptions = {
       maxRetries: options.maxRetries ?? 2,
       retryBaseDelayMs: options.retryBaseDelayMs ?? 250,
       sleep: options.sleep ?? defaultSleep,
     };
     assertNonNegativeInteger(this.maxHistoryTurns, 'maxHistoryTurns');
+    assertNonNegativeInteger(this.timeoutMs, 'timeoutMs');
     assertNonNegativeInteger(this.retryOptions.maxRetries, 'maxRetries');
     if (!Number.isFinite(this.retryOptions.retryBaseDelayMs) || this.retryOptions.retryBaseDelayMs < 0) {
       throw new RangeError('retryBaseDelayMs must be a non-negative finite number');
@@ -300,7 +318,7 @@ export class OpenAICompatibleAgentDriver<TObservation = unknown> implements Agen
     this.activeRequest = controller;
     const userMessage = formatAgentContext(context);
     try {
-      const signal = context.signal ? AbortSignal.any([context.signal, controller.signal]) : controller.signal;
+      const signal = providerSignal(this.timeoutMs, [context.signal, controller.signal])!;
       const response = await requestWithRetries(this.request, `${this.baseUrl}/chat/completions`, {
         method: 'POST',
         signal,
@@ -351,6 +369,7 @@ export class AnthropicAgentDriver<TObservation = unknown> implements AgentDriver
   private readonly maxTokens: number;
   private readonly maxHistoryTurns: number;
   private readonly retryOptions: Required<Pick<KeyedAgentDriverOptions, 'maxRetries' | 'retryBaseDelayMs' | 'sleep'>>;
+  private readonly timeoutMs: number;
   private readonly history: Array<{ role: 'user' | 'assistant'; content: string }> = [];
   private activeRequest?: AbortController;
 
@@ -366,12 +385,14 @@ export class AnthropicAgentDriver<TObservation = unknown> implements AgentDriver
     this.baseUrl = (options.baseUrl ?? options.defaultBaseUrl).replace(/\/$/, '');
     this.maxTokens = options.maxTokens ?? 800;
     this.maxHistoryTurns = options.maxHistoryTurns ?? 8;
+    this.timeoutMs = options.timeoutMs ?? 30_000;
     this.retryOptions = {
       maxRetries: options.maxRetries ?? 2,
       retryBaseDelayMs: options.retryBaseDelayMs ?? 250,
       sleep: options.sleep ?? defaultSleep,
     };
     assertNonNegativeInteger(this.maxHistoryTurns, 'maxHistoryTurns');
+    assertNonNegativeInteger(this.timeoutMs, 'timeoutMs');
     assertNonNegativeInteger(this.retryOptions.maxRetries, 'maxRetries');
     if (!Number.isFinite(this.retryOptions.retryBaseDelayMs) || this.retryOptions.retryBaseDelayMs < 0) {
       throw new RangeError('retryBaseDelayMs must be a non-negative finite number');
@@ -397,7 +418,7 @@ export class AnthropicAgentDriver<TObservation = unknown> implements AgentDriver
     this.activeRequest = controller;
     const userMessage = formatAgentContext(context);
     try {
-      const signal = context.signal ? AbortSignal.any([context.signal, controller.signal]) : controller.signal;
+      const signal = providerSignal(this.timeoutMs, [context.signal, controller.signal])!;
       const response = await requestWithRetries(this.request, `${this.baseUrl}/messages`, {
         method: 'POST',
         signal,
@@ -455,7 +476,7 @@ function openAIProvider(options: {
       if (!apiKey) return { ok: false, detail: `missing ${options.apiKeyEnv}` };
       try {
         const response = await (checkOptions.fetch ?? fetch)(`${options.baseUrl}/models`, {
-          signal: checkOptions.signal,
+          signal: providerSignal(checkOptions.timeoutMs ?? 30_000, [checkOptions.signal]),
           headers: { authorization: `Bearer ${apiKey}` },
         });
         return response.ok
@@ -486,7 +507,7 @@ const anthropicProvider: KeyedProvider = {
     if (!apiKey) return { ok: false, detail: 'missing ANTHROPIC_API_KEY' };
     try {
       const response = await (options.fetch ?? fetch)(`${anthropicProvider.baseUrl}/models`, {
-        signal: options.signal,
+        signal: providerSignal(options.timeoutMs ?? 30_000, [options.signal]),
         headers: {
           'x-api-key': apiKey,
           'anthropic-version': '2023-06-01',

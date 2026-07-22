@@ -125,6 +125,13 @@ const next = await arena.submitAction(session.sessionId, { id: 'Action 4' });
 console.log(next.grid);
 ```
 
+Persist `session.binding` before a request that may need an exact retry. After
+a process restart, call `restoreSessionBinding(binding)` and reuse the original
+`submissionId`; `getSessionBinding(sessionId)` returns the latest JSON-safe
+snapshot. To prevent an old retry key from being paired with a newly fetched
+cursor, a fresh client requires either the original `cursor` or a restored
+binding when `submissionId` is explicit.
+
 Requests time out after 30 seconds by default; set `timeoutMs: 0` to disable
 that bound. The third argument can also inject `fetch` or a shared
 `AbortSignal`. Dynamic path segments are URL-encoded, and API errors expose the
