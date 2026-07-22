@@ -81,7 +81,7 @@ describe('keyed providers', () => {
   });
 
   it('calls OpenAI-compatible APIs and rejects an illegal model action', async () => {
-    const request = vi.fn<AgentFetch>().mockResolvedValue(new Response(JSON.stringify({
+    const request = vi.fn<AgentFetch>().mockImplementation(async () => new Response(JSON.stringify({
       choices: [{ message: { content: '{"reasoning":"go","action":{"id":"advance"}}' } }],
       usage: { prompt_tokens: 10, completion_tokens: 4 },
     }), { status: 200, headers: { 'content-type': 'application/json' } }));
@@ -109,7 +109,19 @@ describe('keyed providers', () => {
     const requestBody = JSON.parse(request.mock.calls[0]![1]!.body as string) as {
       messages: Array<{ role: string; content: string }>;
     };
-    expect(requestBody.messages[0]?.content).toContain('Choose exactly one entry from legalActions.');
+    expect(requestBody.messages[0]?.content).toContain(
+      'Choose exactly one entry from legalActions or systemActions.',
+    );
+
+    await driver.act({
+      observation: reducer.view(reducer.init({ goal: 2 }, 1)),
+      legalActions: [{ id: 'advance' }],
+      step: 1,
+    });
+    const continuedBody = JSON.parse(request.mock.calls[1]![1]!.body as string) as {
+      messages: Array<{ role: string; content: string }>;
+    };
+    expect(continuedBody.messages.map(({ role }) => role)).toEqual(['system', 'user', 'assistant', 'user']);
 
     request.mockResolvedValueOnce(new Response(JSON.stringify({
       choices: [{ message: { content: '{"action":{"id":"jump","index":9}}' } }],
@@ -119,6 +131,25 @@ describe('keyed providers', () => {
       legalActions: [{ id: 'advance' }],
       step: 0,
     })).rejects.toThrow('illegal action');
+  });
+
+  it('interrupts an in-flight keyed request while retaining completed context', async () => {
+    const request = vi.fn<AgentFetch>((_url, init) => new Promise((_resolve, reject) => {
+      init?.signal?.addEventListener('abort', () => reject(init.signal?.reason), { once: true });
+    }));
+    const driver = createKeyedAgentDriver<View>('openai', {
+      apiKey: 'secret-key', model: 'test-model', fetch: request,
+    });
+    const pending = driver.act({
+      observation: reducer.view(reducer.init({ goal: 2 }, 1)),
+      legalActions: [{ id: 'advance' }],
+      step: 0,
+    });
+    const rejected = expect(pending).rejects.toThrow('agent interrupted');
+    expect(driver.interrupt?.({ prompt: 'stop' })).toEqual({
+      mode: 'abort', interrupted: true, preservesContext: true,
+    });
+    await rejected;
   });
 
   it('calls Anthropic Messages without requiring a provider SDK', async () => {

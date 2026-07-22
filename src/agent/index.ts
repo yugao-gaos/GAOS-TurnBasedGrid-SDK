@@ -4,6 +4,9 @@ export {
   type AgentDecision,
   type AgentDriver,
   type AgentDriverContext,
+  type AgentInterruptOptions,
+  type AgentInterruptionMode,
+  type AgentInterruptionResult,
   type AgentTokenUsage,
 } from './driver.js';
 export {
@@ -24,4 +27,3 @@ export {
   runAgentDriverEpisode,
   type AgentDriverEpisodeResult,
 } from './run.js';
-

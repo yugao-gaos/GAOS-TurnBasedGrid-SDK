@@ -148,6 +148,8 @@ export interface Turn {
   grid: string;
   visualEvents: VisualEvent[];
   actions: ActionDef[];
+  /** Semantic host controls that are not shuffled or legality-filtered. */
+  systemActions?: ActionDef[];
   status: 'playing' | 'won' | 'failed';
   stars?: number;
   hud: TurnHud;

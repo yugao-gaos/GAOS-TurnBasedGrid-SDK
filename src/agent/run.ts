@@ -31,6 +31,7 @@ export async function runAgentDriverEpisode<TLevel, TState, TView extends GridTu
     const decision = await driver.act({
       observation: turn.observation,
       legalActions: turn.legalActions,
+      systemActions: turn.systemActions,
       actionDefinitions: turn.actionDefinitions,
       step: turn.info.steps,
       systemPrompt: options.systemPrompt,
@@ -43,4 +44,3 @@ export async function runAgentDriverEpisode<TLevel, TState, TView extends GridTu
   }
   return { finalTurn: turn, transcript: environment.transcript(), decisions };
 }
-

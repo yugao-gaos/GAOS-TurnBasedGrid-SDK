@@ -4,6 +4,7 @@ import {
   type AgentDecision,
   type AgentDriver,
   type AgentDriverContext,
+  type AgentInterruptionResult,
   type AgentTokenUsage,
 } from './driver.js';
 
@@ -80,7 +81,7 @@ export class KeyedProviderRegistry {
 
 const DEFAULT_SYSTEM_PROMPT = [
   'You are controlling a turn-based grid environment.',
-  'Choose exactly one entry from legalActions.',
+  'Choose exactly one entry from legalActions or systemActions.',
   'Return only JSON with this shape:',
   '{"reasoning":"brief explanation","action":{"id":"action id","x":0,"y":0,"index":0},"message":"optional"}',
   'Omit x, y, or index when the selected legal action does not contain it.',
@@ -158,6 +159,7 @@ export function formatAgentContext<TObservation>(context: AgentDriverContext<TOb
     observation: context.observation,
     actionDefinitions: context.actionDefinitions,
     legalActions: context.legalActions,
+    systemActions: context.systemActions,
     guidance: context.guidance,
   });
 }
@@ -184,7 +186,7 @@ function assertLegal<TObservation>(
   decision: AgentDecision,
   context: AgentDriverContext<TObservation>,
 ): AgentDecision {
-  if (!isLegalAgentDecision(decision, context.legalActions)) {
+  if (!isLegalAgentDecision(decision, [...context.legalActions, ...(context.systemActions ?? [])])) {
     throw new TypeError(`agent selected an illegal action: ${JSON.stringify(decision.action)}`);
   }
   return decision;
@@ -204,6 +206,8 @@ export class OpenAICompatibleAgentDriver<TObservation = unknown> implements Agen
   private readonly model: string;
   private readonly baseUrl: string;
   private readonly maxTokens: number;
+  private readonly history: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+  private activeRequest?: AbortController;
 
   constructor(
     id: string,
@@ -220,38 +224,60 @@ export class OpenAICompatibleAgentDriver<TObservation = unknown> implements Agen
     if (!this.model) throw new TypeError(`model is required for keyed provider ${id}`);
   }
 
+  reset(): void {
+    this.history.length = 0;
+    this.activeRequest?.abort(new Error('agent reset'));
+    this.activeRequest = undefined;
+  }
+
+  interrupt(): AgentInterruptionResult {
+    const interrupted = this.activeRequest !== undefined;
+    this.activeRequest?.abort(new Error('agent interrupted'));
+    return { mode: 'abort', interrupted, preservesContext: true };
+  }
+
   async act(context: AgentDriverContext<TObservation>): Promise<AgentDecision> {
-    const response = await this.request(`${this.baseUrl}/chat/completions`, {
-      method: 'POST',
-      signal: context.signal,
-      headers: {
-        authorization: `Bearer ${this.options.apiKey}`,
-        'content-type': 'application/json',
-        ...this.options.headers,
-      },
-      body: JSON.stringify({
-        model: this.model,
-        max_tokens: this.maxTokens,
-        messages: [
-          { role: 'system', content: systemPrompt(this.options, context) },
-          { role: 'user', content: formatAgentContext(context) },
-        ],
-      }),
-    });
-    if (!response.ok) throw await responseError(response, this.options.apiKey);
-    const raw: unknown = await response.json();
-    const payload = record(raw);
-    const choices = Array.isArray(payload?.choices) ? payload.choices : [];
-    const first = record(choices[0]);
-    const message = record(first?.message);
-    if (typeof message?.content !== 'string') throw new TypeError('agent provider returned no message content');
-    const parsed = parseAgentDecision(message.content);
-    const tokens = record(payload?.usage);
-    return assertLegal({
-      ...parsed,
-      raw,
-      usage: usage(tokens?.prompt_tokens, tokens?.completion_tokens),
-    }, context);
+    const controller = new AbortController();
+    this.activeRequest = controller;
+    const userMessage = formatAgentContext(context);
+    try {
+      const response = await this.request(`${this.baseUrl}/chat/completions`, {
+        method: 'POST',
+        signal: context.signal ? AbortSignal.any([context.signal, controller.signal]) : controller.signal,
+        headers: {
+          authorization: `Bearer ${this.options.apiKey}`,
+          'content-type': 'application/json',
+          ...this.options.headers,
+        },
+        body: JSON.stringify({
+          model: this.model,
+          max_tokens: this.maxTokens,
+          messages: [
+            { role: 'system', content: systemPrompt(this.options, context) },
+            ...this.history,
+            { role: 'user', content: userMessage },
+          ],
+        }),
+      });
+      if (!response.ok) throw await responseError(response, this.options.apiKey);
+      const raw: unknown = await response.json();
+      const payload = record(raw);
+      const choices = Array.isArray(payload?.choices) ? payload.choices : [];
+      const first = record(choices[0]);
+      const message = record(first?.message);
+      if (typeof message?.content !== 'string') throw new TypeError('agent provider returned no message content');
+      const parsed = parseAgentDecision(message.content);
+      const tokens = record(payload?.usage);
+      const decision = assertLegal({
+        ...parsed,
+        raw,
+        usage: usage(tokens?.prompt_tokens, tokens?.completion_tokens),
+      }, context);
+      this.history.push({ role: 'user', content: userMessage }, { role: 'assistant', content: message.content });
+      return decision;
+    } finally {
+      if (this.activeRequest === controller) this.activeRequest = undefined;
+    }
   }
 }
 
@@ -262,6 +288,8 @@ export class AnthropicAgentDriver<TObservation = unknown> implements AgentDriver
   private readonly model: string;
   private readonly baseUrl: string;
   private readonly maxTokens: number;
+  private readonly history: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+  private activeRequest?: AbortController;
 
   constructor(
     id: string,
@@ -278,41 +306,62 @@ export class AnthropicAgentDriver<TObservation = unknown> implements AgentDriver
     if (!this.model) throw new TypeError(`model is required for keyed provider ${id}`);
   }
 
+  reset(): void {
+    this.history.length = 0;
+    this.activeRequest?.abort(new Error('agent reset'));
+    this.activeRequest = undefined;
+  }
+
+  interrupt(): AgentInterruptionResult {
+    const interrupted = this.activeRequest !== undefined;
+    this.activeRequest?.abort(new Error('agent interrupted'));
+    return { mode: 'abort', interrupted, preservesContext: true };
+  }
+
   async act(context: AgentDriverContext<TObservation>): Promise<AgentDecision> {
-    const response = await this.request(`${this.baseUrl}/messages`, {
-      method: 'POST',
-      signal: context.signal,
-      headers: {
-        'x-api-key': this.options.apiKey,
-        'anthropic-version': '2023-06-01',
-        'content-type': 'application/json',
-        ...this.options.headers,
-      },
-      body: JSON.stringify({
-        model: this.model,
-        max_tokens: this.maxTokens,
-        system: systemPrompt(this.options, context),
-        messages: [{ role: 'user', content: formatAgentContext(context) }],
-      }),
-    });
-    if (!response.ok) throw await responseError(response, this.options.apiKey);
-    const raw: unknown = await response.json();
-    const payload = record(raw);
-    const content = Array.isArray(payload?.content) ? payload.content : [];
-    const text = content
-      .map(record)
-      .filter((part): part is Record<string, unknown> => part !== undefined)
-      .filter((part) => part.type === 'text' && typeof part.text === 'string')
-      .map((part) => part.text)
-      .join('\n');
-    if (!text) throw new TypeError('agent provider returned no message content');
-    const parsed = parseAgentDecision(text);
-    const tokens = record(payload?.usage);
-    return assertLegal({
-      ...parsed,
-      raw,
-      usage: usage(tokens?.input_tokens, tokens?.output_tokens),
-    }, context);
+    const controller = new AbortController();
+    this.activeRequest = controller;
+    const userMessage = formatAgentContext(context);
+    try {
+      const response = await this.request(`${this.baseUrl}/messages`, {
+        method: 'POST',
+        signal: context.signal ? AbortSignal.any([context.signal, controller.signal]) : controller.signal,
+        headers: {
+          'x-api-key': this.options.apiKey,
+          'anthropic-version': '2023-06-01',
+          'content-type': 'application/json',
+          ...this.options.headers,
+        },
+        body: JSON.stringify({
+          model: this.model,
+          max_tokens: this.maxTokens,
+          system: systemPrompt(this.options, context),
+          messages: [...this.history, { role: 'user', content: userMessage }],
+        }),
+      });
+      if (!response.ok) throw await responseError(response, this.options.apiKey);
+      const raw: unknown = await response.json();
+      const payload = record(raw);
+      const content = Array.isArray(payload?.content) ? payload.content : [];
+      const text = content
+        .map(record)
+        .filter((part): part is Record<string, unknown> => part !== undefined)
+        .filter((part) => part.type === 'text' && typeof part.text === 'string')
+        .map((part) => part.text)
+        .join('\n');
+      if (!text) throw new TypeError('agent provider returned no message content');
+      const parsed = parseAgentDecision(text);
+      const tokens = record(payload?.usage);
+      const decision = assertLegal({
+        ...parsed,
+        raw,
+        usage: usage(tokens?.input_tokens, tokens?.output_tokens),
+      }, context);
+      this.history.push({ role: 'user', content: userMessage }, { role: 'assistant', content: text });
+      return decision;
+    } finally {
+      if (this.activeRequest === controller) this.activeRequest = undefined;
+    }
   }
 }
 

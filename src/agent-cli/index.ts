@@ -21,6 +21,8 @@ export {
 export {
   spawnCliAgent,
   type CliAgentExit,
+  type CliAgentInterruptOptions,
+  type CliAgentInterruptionResult,
   type CliAgentProcess,
   type SpawnCliAgentOptions,
 } from './spawn.js';

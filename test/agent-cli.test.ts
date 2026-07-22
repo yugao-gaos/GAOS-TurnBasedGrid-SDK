@@ -159,6 +159,35 @@ describe('CLI agent process integration', () => {
     expect(transcripts).toEqual(['move selected']);
   });
 
+  it('interrupts and resumes a capable CLI through the generic process contract', async () => {
+    const transcripts: string[] = [];
+    let transportReset = false;
+    const spec: CliAgentSpec = {
+      id: 'resumable-test', label: 'Resumable test', bin: process.execPath,
+      supportsResume: true,
+      launch: (context) => ({
+        argv: context.resume
+          ? ['-e', 'console.log(JSON.stringify({text:"resumed"}))']
+          : ['-e', 'setInterval(() => {}, 1000)'],
+        files: {},
+      }),
+      parseLine: parseGenericLine,
+      login: 'none',
+    };
+    const launched = spawnCliAgent(spec, {
+      mcpUrl: 'http://localhost/mcp', prompt: 'play',
+      sessionId: '00000000-0000-4000-8000-000000000001',
+    }, { onTranscript: (text) => transcripts.push(text) });
+    const result = await launched.interrupt({
+      prompt: 'new guidance',
+      beforeResume: () => { transportReset = true; },
+    });
+    expect(result).toMatchObject({ mode: 'resume', interrupted: true, preservesContext: true });
+    expect(transportReset).toBe(true);
+    await expect(result.process?.completion).resolves.toMatchObject({ code: 0 });
+    expect(transcripts).toEqual(['resumed']);
+  });
+
   it('rejects custom config paths that escape the scratch directory', () => {
     const spec: CliAgentSpec = {
       id: 'unsafe',

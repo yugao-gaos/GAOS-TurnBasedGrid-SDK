@@ -16,6 +16,8 @@ export interface GridSubmittedAction {
 /** Minimum observation surface used by the generic solver and replay checker. */
 export interface GridTurnView {
   actions: readonly GridActionDefinition[];
+  /** Semantic host controls, separate from hidden/state-filtered gameplay actions. */
+  systemActions?: readonly GridActionDefinition[];
   status: 'playing' | 'won' | 'failed';
   stars?: number;
   hud: {

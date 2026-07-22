@@ -6,6 +6,8 @@ import type {
 export interface AgentDriverContext<TObservation = unknown> {
   observation: TObservation;
   legalActions: readonly GridSubmittedAction[];
+  /** Always-available semantic controls, separate from gameplay legality. */
+  systemActions?: readonly GridSubmittedAction[];
   actionDefinitions?: readonly GridActionDefinition[];
   step: number;
   systemPrompt?: string;
@@ -26,10 +28,26 @@ export interface AgentDecision {
   raw?: unknown;
 }
 
+export type AgentInterruptionMode = 'resume' | 'abort' | 'restart' | 'unsupported';
+
+export interface AgentInterruptOptions {
+  /** New user guidance that caused the interruption. */
+  prompt?: string;
+}
+
+export interface AgentInterruptionResult {
+  mode: AgentInterruptionMode;
+  interrupted: boolean;
+  /** True when the next decision retains the runner's prior conversation. */
+  preservesContext: boolean;
+}
+
 export interface AgentDriver<TObservation = unknown> {
   readonly id: string;
   readonly label: string;
   reset?(): void | Promise<void>;
+  /** Cancel the active decision. Implementations own provider-specific context preservation. */
+  interrupt?(options?: AgentInterruptOptions): AgentInterruptionResult | Promise<AgentInterruptionResult>;
   act(context: AgentDriverContext<TObservation>): Promise<AgentDecision>;
 }
 
@@ -84,4 +102,3 @@ export function isLegalAgentDecision(
   const key = actionKey(decision.action);
   return legalActions.some((action) => actionKey(action) === key);
 }
-

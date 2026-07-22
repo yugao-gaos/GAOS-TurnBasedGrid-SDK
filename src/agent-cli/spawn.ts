@@ -2,6 +2,7 @@ import { spawn, type ChildProcess } from 'node:child_process';
 import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
+import type { AgentInterruptionResult } from '../agent/driver.js';
 import type { CliAgentLaunchContext, CliAgentSpec } from './specs.js';
 
 export interface CliAgentExit {
@@ -14,7 +15,19 @@ export interface CliAgentProcess {
   child: ChildProcess;
   workdir: string;
   completion: Promise<CliAgentExit>;
+  interruptionMode: 'resume' | 'unsupported';
+  interrupt(options: CliAgentInterruptOptions): Promise<CliAgentInterruptionResult>;
   stop(signal?: NodeJS.Signals): boolean;
+}
+
+export interface CliAgentInterruptOptions {
+  prompt: string;
+  /** Product-owned transport reset performed after exit and before resume. */
+  beforeResume?(): void | Promise<void>;
+}
+
+export interface CliAgentInterruptionResult extends AgentInterruptionResult {
+  process?: CliAgentProcess;
 }
 
 export interface SpawnCliAgentOptions {
@@ -90,10 +103,26 @@ export function spawnCliAgent(
       resolveCompletion({ code, signal, stderrTail: stderrTail.trim() });
     });
   });
-  return {
+  const agentProcess: CliAgentProcess = {
     child,
     workdir,
     completion,
+    interruptionMode: spec.supportsResume && context.sessionId ? 'resume' : 'unsupported',
+    interrupt: async (interruptOptions) => {
+      if (!spec.supportsResume || !context.sessionId) {
+        return { mode: 'unsupported', interrupted: false, preservesContext: false };
+      }
+      child.kill('SIGTERM');
+      await completion;
+      await interruptOptions.beforeResume?.();
+      const replacement = spawnCliAgent(spec, {
+        ...context,
+        prompt: interruptOptions.prompt,
+        resume: true,
+      }, options);
+      return { mode: 'resume', interrupted: true, preservesContext: true, process: replacement };
+    },
     stop: (signal = 'SIGTERM') => child.kill(signal),
   };
+  return agentProcess;
 }

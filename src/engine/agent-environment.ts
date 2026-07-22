@@ -39,6 +39,7 @@ export interface AgentTurn<TView extends GridTurnView> {
   observation: TView;
   actionDefinitions: TView['actions'];
   legalActions: GridSubmittedAction[];
+  systemActions: GridSubmittedAction[];
   reward: number;
   terminated: boolean;
   truncated: boolean;
@@ -172,7 +173,12 @@ export class AgentEnvironment<TLevel, TState, TView extends GridTurnView> {
       throw new AgentEnvironmentError('episode_done', 'reset the environment before another step');
     }
     const previous = this.options.reducer.view(this.state);
-    const concrete = this.enumerateActions(previous);
+    const concrete = [
+      ...this.enumerateActions(previous),
+      ...(previous.systemActions
+        ? enumerateGridActions({ ...previous, actions: previous.systemActions })
+        : []),
+    ];
     if (!this.isActionLegal(action, previous, concrete)) {
       throw new AgentEnvironmentError('illegal_action', `action is not legal this turn: ${actionKey(action)}`);
     }
@@ -233,6 +239,9 @@ export class AgentEnvironment<TLevel, TState, TView extends GridTurnView> {
       observation: view,
       actionDefinitions: view.actions,
       legalActions: this.ended ? [] : this.enumerateActions(view),
+      systemActions: this.ended || !view.systemActions
+        ? []
+        : enumerateGridActions({ ...view, actions: view.systemActions }),
       reward: this.lastReward,
       terminated,
       truncated,

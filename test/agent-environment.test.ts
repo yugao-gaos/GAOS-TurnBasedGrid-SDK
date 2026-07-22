@@ -19,6 +19,7 @@ const reducer: GridReducer<Level, State> = {
     if (action.id === 'jump' && action.index !== undefined) {
       return { at: state.at + action.index, actionsUsed: state.actionsUsed + 1 };
     }
+    if (action.id === 'restart') return { at: 0, actionsUsed: state.actionsUsed + 1 };
     throw new Error('reducer rejected action');
   },
   view: (state): GridTurnView => ({
@@ -26,6 +27,7 @@ const reducer: GridReducer<Level, State> = {
       { id: 'advance', params: 'none' },
       { id: 'jump', params: 'index' },
     ],
+    systemActions: [{ id: 'restart', params: 'none' }],
     status: state.at >= 3 ? 'won' : 'playing',
     ...(state.at >= 3 ? { stars: state.actionsUsed === 2 ? 3 : 2 } : {}),
     hud: { actionsUsed: state.actionsUsed, items: [{ index: 2 }] },
@@ -50,7 +52,18 @@ describe('AgentEnvironment', () => {
       { id: 'advance' },
       { id: 'jump', index: 2 },
     ]);
+    expect(turn.systemActions).toEqual([{ id: 'restart' }]);
     expect(turn.info).toMatchObject({ seed: 42, steps: 0, totalReward: 0 });
+  });
+
+  it('validates system actions separately from legal gameplay actions', () => {
+    const env = environment();
+    env.reset();
+    env.step({ id: 'advance' });
+    const restarted = env.step({ id: 'restart' });
+    expect(restarted.observation).toMatchObject({ hud: { actionsUsed: 2 } });
+    expect(restarted.legalActions.map(({ id }) => id)).not.toContain('restart');
+    expect(restarted.systemActions).toEqual([{ id: 'restart' }]);
   });
 
   it('validates actions, terminates, rewards, and records a transcript', () => {
