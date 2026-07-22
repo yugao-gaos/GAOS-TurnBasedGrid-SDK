@@ -21,6 +21,10 @@ jobs:
           node-version: 22
           cache: npm
           registry-url: https://npm.pkg.github.com
+      - name: Verify release tag matches TypeScript and Python package versions
+        env:
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+        run: node scripts/check-release-version.mjs
       - run: npm ci
       - run: npm run typecheck
       - run: npm test

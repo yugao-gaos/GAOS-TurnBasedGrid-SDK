@@ -9,12 +9,15 @@ permissions:
 
 jobs:
   typescript:
+    strategy:
+      matrix:
+        node: ['20.3', '22']
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
         with:
-          node-version: 22
+          node-version: ${{ matrix.node }}
           cache: npm
       - run: npm ci
       - run: npm audit --omit=dev
@@ -24,12 +27,15 @@ jobs:
       - run: npm pack --dry-run
 
   python:
+    strategy:
+      matrix:
+        python: ['3.10', '3.12']
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-python@v7
         with:
-          python-version: "3.12"
+          python-version: ${{ matrix.python }}
           cache: pip
       - run: python -m pip install build pytest
       - run: PYTHONPATH=python python -m pytest python/tests

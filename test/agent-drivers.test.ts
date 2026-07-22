@@ -161,10 +161,11 @@ describe('keyed providers', () => {
       .mockResolvedValue(ok())
       .mockResolvedValueOnce(ok())
       .mockResolvedValueOnce(ok());
-    const sleep = vi.fn(async () => undefined);
+    const sleep = vi.fn<(delayMs: number, signal: AbortSignal) => Promise<void>>(async () => undefined);
     const driver = createKeyedAgentDriver<View>('openai', {
       apiKey: 'secret-key', model: 'test-model', fetch: request,
-      maxHistoryTurns: 1, maxRetries: 2, retryBaseDelayMs: 5, sleep,
+      maxHistoryTurns: 1, maxRetries: 2, retryBaseDelayMs: 5,
+      retryJitter: () => 0.5, sleep,
     });
     for (let step = 0; step < 3; step++) {
       await driver.act({
@@ -199,6 +200,92 @@ describe('keyed providers', () => {
     await vi.waitFor(() => expect(sleep).toHaveBeenCalled());
     expect(driver.interrupt?.()).toMatchObject({ interrupted: true });
     await expect(pending).rejects.toThrow('agent interrupted');
+  });
+
+  it('retries network failures, honors Retry-After, and applies bounded jitter', async () => {
+    const ok = new Response(JSON.stringify({
+      choices: [{ message: { content: '{"action":{"id":"advance"}}' } }],
+    }));
+    const request = vi.fn<AgentFetch>()
+      .mockRejectedValueOnce(new TypeError('network reset'))
+      .mockResolvedValueOnce(new Response('slow down', {
+        status: 429, headers: { 'retry-after': '2' },
+      }))
+      .mockResolvedValueOnce(ok);
+    const sleep = vi.fn<(delayMs: number, signal: AbortSignal) => Promise<void>>(async () => undefined);
+    const driver = createKeyedAgentDriver<View>('openai', {
+      apiKey: 'secret-key', model: 'test-model', fetch: request,
+      maxRetries: 2, retryBaseDelayMs: 100, maxRetryDelayMs: 5_000,
+      retryJitter: () => 0.5, sleep,
+    });
+    await expect(driver.act({
+      observation: reducer.view(reducer.init({ goal: 2 }, 1)),
+      legalActions: [{ id: 'advance' }], step: 0,
+    })).resolves.toMatchObject({ action: { id: 'advance' } });
+    expect(sleep.mock.calls.map(([delay]) => delay)).toEqual([100, 2_000]);
+  });
+
+  it('rejects invalid retry jitter before scheduling a delay', async () => {
+    const sleep = vi.fn<(delayMs: number, signal: AbortSignal) => Promise<void>>(async () => undefined);
+    const driver = createKeyedAgentDriver<View>('openai', {
+      apiKey: 'secret-key', model: 'test-model', maxRetries: 1,
+      retryJitter: () => Number.NaN, sleep,
+      fetch: async () => new Response('busy', { status: 503 }),
+    });
+    await expect(driver.act({
+      observation: reducer.view(reducer.init({ goal: 2 }, 1)),
+      legalActions: [{ id: 'advance' }], step: 0,
+    })).rejects.toThrow(/retryJitter/);
+    expect(sleep).not.toHaveBeenCalled();
+  });
+
+  it('falls back to exponential backoff for malformed Retry-After', async () => {
+    const sleep = vi.fn<(delayMs: number, signal: AbortSignal) => Promise<void>>(async () => undefined);
+    const driver = createKeyedAgentDriver<View>('openai', {
+      apiKey: 'secret-key', model: 'test-model', maxRetries: 1,
+      retryBaseDelayMs: 80, retryJitter: () => 0.5, sleep,
+      fetch: vi.fn<AgentFetch>()
+        .mockResolvedValueOnce(new Response('busy', {
+          status: 429, headers: { 'retry-after': 'not-a-date' },
+        }))
+        .mockResolvedValueOnce(new Response(JSON.stringify({
+          choices: [{ message: { content: '{"action":{"id":"advance"}}' } }],
+        }))),
+    });
+    await driver.act({
+      observation: reducer.view(reducer.init({ goal: 2 }, 1)),
+      legalActions: [{ id: 'advance' }], step: 0,
+    });
+    expect(sleep).toHaveBeenCalledWith(80, expect.any(AbortSignal));
+  });
+
+  it('rejects concurrent calls and bounds context and response bytes', async () => {
+    let release!: (response: Response) => void;
+    const request = vi.fn<AgentFetch>(() => new Promise<Response>((resolve) => { release = resolve; }));
+    const driver = createKeyedAgentDriver<View>('openai', {
+      apiKey: 'secret-key', model: 'test-model', fetch: request,
+    });
+    const context = {
+      observation: reducer.view(reducer.init({ goal: 2 }, 1)),
+      legalActions: [{ id: 'advance' }], step: 0,
+    };
+    const first = driver.act(context);
+    await expect(driver.act(context)).rejects.toThrow(/already in progress/);
+    release(new Response(JSON.stringify({
+      choices: [{ message: { content: '{"action":{"id":"advance"}}' } }],
+    })));
+    await first;
+
+    const tooMuchContext = createKeyedAgentDriver<View>('openai', {
+      apiKey: 'secret-key', model: 'test-model', fetch: request, maxContextBytes: 16,
+    });
+    await expect(tooMuchContext.act(context)).rejects.toThrow(/context exceeds/);
+
+    const tooMuchResponse = createKeyedAgentDriver<View>('openai', {
+      apiKey: 'secret-key', model: 'test-model', maxResponseBytes: 4,
+      fetch: async () => new Response('12345'),
+    });
+    await expect(tooMuchResponse.act(context)).rejects.toThrow(/exceeds 4 bytes/);
   });
 
   it('calls Anthropic Messages without requiring a provider SDK', async () => {

@@ -27,7 +27,7 @@ class ArenaEnv:
         level_id: str,
         base_url: str = "http://localhost:8899",
         game_mode: str = "challenge",
-        play_method: str = "autonomous_scored",
+        play_method: str = "autonomous_local",
         api_key: str | None = None,
     ):
         self.client = ArenaClient(base_url, api_key)

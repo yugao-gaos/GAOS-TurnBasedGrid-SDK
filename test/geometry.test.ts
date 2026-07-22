@@ -74,4 +74,16 @@ describe('grid geometry', () => {
     });
     expect(cells).toEqual([[2, 2], [3, 1], [1, 1]]);
   });
+
+  it('rejects invalid cone ranges', () => {
+    const options = {
+      from: [0, 0] as [number, number],
+      direction: 'up' as const,
+      cellExists: () => true,
+      isBlocked: () => false,
+    };
+    expect(() => coneFieldCells({ ...options, range: -1 })).toThrow(/range/);
+    expect(() => coneFieldCells({ ...options, range: 1.5 })).toThrow(/range/);
+    expect(coneFieldCells({ ...options, range: 0 })).toEqual([]);
+  });
 });

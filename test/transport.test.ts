@@ -40,6 +40,11 @@ describe('directed transport', () => {
 
     expect(result).toEqual({ state: { x: 3 }, passes: 3, moves: 3, completed: true });
   });
+
+  it('requires at least one authored pass', () => {
+    expect(() => resolveTransportRun({}, { maxPasses: 0, step: () => 0 }))
+      .toThrow(/positive/);
+  });
 });
 
 describe('linked components and interlocks', () => {

@@ -56,8 +56,8 @@ export function resolveTransportRun<TState>(
   state: TState,
   options: TransportRunOptions<TState>,
 ): TransportRunResult<TState> {
-  if (!Number.isSafeInteger(options.maxPasses) || options.maxPasses < 0) {
-    throw new RangeError('transport maxPasses must be a non-negative safe integer');
+  if (!Number.isSafeInteger(options.maxPasses) || options.maxPasses < 1) {
+    throw new RangeError('transport maxPasses must be a positive safe integer');
   }
   let passes = 0;
   let moves = 0;

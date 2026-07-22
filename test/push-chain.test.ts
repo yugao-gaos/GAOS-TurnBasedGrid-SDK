@@ -43,6 +43,16 @@ describe('push-chain mechanism', () => {
     expect(plan(4)).toBeNull();
   });
 
+  it('rejects a chain as soon as it exceeds maxItems', () => {
+    const occupied = new Set(['1,1', '2,1']);
+    expect(planPushChain([1, 1], [1, 0], {
+      occupied: (cell) => occupied.has(key(cell)),
+      destination: ([x, y]) => ({ to: [x + 1, y] }),
+      blocked: () => false,
+      maxItems: 1,
+    })).toBeNull();
+  });
+
   it('commits state farthest-first and arrivals nearest-first', () => {
     const events: string[] = [];
     const steps = [

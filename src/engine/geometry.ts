@@ -182,6 +182,9 @@ export interface ConeFieldOptions {
 
 /** Widening cardinal cone with callback-driven board and blocker policy. */
 export function coneFieldCells(options: ConeFieldOptions): Cell[] {
+  if (!Number.isSafeInteger(options.range) || options.range < 0) {
+    throw new RangeError('cone range must be a non-negative safe integer');
+  }
   const [dx, dy] = CARDINAL_VECTORS[options.direction];
   const cells: Cell[] = [];
   for (let forward = 1; forward <= options.range; forward++) {

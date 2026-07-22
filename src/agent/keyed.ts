@@ -28,10 +28,18 @@ export interface KeyedAgentDriverOptions {
   systemPrompt?: string;
   /** Number of completed user/assistant turns retained. Defaults to 8. */
   maxHistoryTurns?: number;
+  /** Maximum UTF-8 bytes for system prompt, retained history, and current context. Defaults to 256 KiB. */
+  maxContextBytes?: number;
+  /** Maximum provider response body size. Defaults to 1 MiB. */
+  maxResponseBytes?: number;
   /** Retries for HTTP 429 and 5xx responses. Defaults to 2. */
   maxRetries?: number;
   /** Initial exponential backoff delay in milliseconds. Defaults to 250. */
   retryBaseDelayMs?: number;
+  /** Maximum retry delay after backoff and Retry-After handling. Defaults to 30 seconds. */
+  maxRetryDelayMs?: number;
+  /** Random source in [0, 1] for retry jitter. Defaults to Math.random. */
+  retryJitter?: () => number;
   /** Optional delay implementation for deterministic harnesses. */
   sleep?: (delayMs: number, signal: AbortSignal) => Promise<void>;
   /** Complete provider-call deadline. Defaults to 30,000; zero disables it. */
@@ -192,8 +200,27 @@ function secretSafeError(message: string, apiKey: string): Error {
   return new Error(apiKey ? message.split(apiKey).join('[redacted]') : message);
 }
 
-async function responseError(response: Response, apiKey: string): Promise<Error> {
-  const body = (await response.text()).replace(/\s+/g, ' ').slice(0, 500);
+async function limitedResponseText(response: Response, maxBytes: number): Promise<string> {
+  if (!response.body) return '';
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let bytes = 0;
+  let text = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    bytes += value.byteLength;
+    if (bytes > maxBytes) {
+      await reader.cancel();
+      throw new Error(`agent provider response exceeds ${maxBytes} bytes`);
+    }
+    text += decoder.decode(value, { stream: true });
+  }
+  return text + decoder.decode();
+}
+
+async function responseError(response: Response, apiKey: string, maxBytes: number): Promise<Error> {
+  const body = (await limitedResponseText(response, maxBytes)).replace(/\s+/g, ' ').slice(0, 500);
   return secretSafeError(`agent provider returned HTTP ${response.status}${body ? `: ${body}` : ''}`, apiKey);
 }
 
@@ -232,15 +259,75 @@ async function requestWithRetries(
   url: string,
   init: RequestInit,
   signal: AbortSignal,
-  options: Required<Pick<KeyedAgentDriverOptions, 'maxRetries' | 'retryBaseDelayMs' | 'sleep'>>,
+  options: Required<Pick<KeyedAgentDriverOptions,
+    'maxRetries' | 'retryBaseDelayMs' | 'maxRetryDelayMs' | 'retryJitter' | 'sleep'>>,
 ): Promise<Response> {
+  const jitter = (): number => {
+    const value = options.retryJitter();
+    if (typeof value !== 'number' || !Number.isFinite(value) || value < 0 || value > 1) {
+      throw new RangeError('retryJitter must return a finite number between 0 and 1');
+    }
+    return value;
+  };
   for (let attempt = 0; ; attempt++) {
-    const response = await request(url, { ...init, signal });
+    let response: Response;
+    try {
+      response = await request(url, { ...init, signal });
+    } catch (error) {
+      if (signal.aborted || attempt >= options.maxRetries) throw error;
+      const random = jitter();
+      const delay = Math.min(
+        options.maxRetryDelayMs,
+        options.retryBaseDelayMs * (2 ** attempt) * (0.5 + random),
+      );
+      await options.sleep(delay, signal);
+      continue;
+    }
     const transient = response.status === 429 || response.status >= 500;
     if (!transient || attempt >= options.maxRetries) return response;
+    const retryAfter = response.headers.get('retry-after');
+    let retryAfterMs = 0;
+    if (retryAfter) {
+      const seconds = Number(retryAfter);
+      if (Number.isFinite(seconds)) retryAfterMs = Math.max(0, seconds * 1000);
+      else {
+        const date = Date.parse(retryAfter);
+        if (Number.isFinite(date)) retryAfterMs = Math.max(0, date - Date.now());
+      }
+    }
     await response.body?.cancel();
-    await options.sleep(options.retryBaseDelayMs * (2 ** attempt), signal);
+    const random = jitter();
+    const backoff = options.retryBaseDelayMs * (2 ** attempt) * (0.5 + random);
+    await options.sleep(Math.min(options.maxRetryDelayMs, Math.max(backoff, retryAfterMs)), signal);
   }
+}
+
+const utf8Bytes = (value: string): number => new TextEncoder().encode(value).byteLength;
+
+function boundedMessages(
+  system: string,
+  history: Array<{ role: 'user' | 'assistant'; content: string }>,
+  current: string,
+  maxBytes: number,
+): Array<{ role: 'system' | 'user' | 'assistant'; content: string }> {
+  const fixedBytes = utf8Bytes(system) + utf8Bytes(current);
+  if (fixedBytes > maxBytes) {
+    throw new RangeError(`agent context exceeds ${maxBytes} UTF-8 bytes without history`);
+  }
+  let start = 0;
+  let historyBytes = history.reduce((total, message) => total + utf8Bytes(message.content), 0);
+  while (fixedBytes + historyBytes > maxBytes && start < history.length) {
+    const remove = Math.min(2, history.length - start);
+    for (let index = 0; index < remove; index++) {
+      historyBytes -= utf8Bytes(history[start + index]!.content);
+    }
+    start += remove;
+  }
+  return [
+    { role: 'system', content: system },
+    ...history.slice(start),
+    { role: 'user', content: current },
+  ];
 }
 
 function assertLegal<TObservation>(
@@ -268,7 +355,10 @@ export class OpenAICompatibleAgentDriver<TObservation = unknown> implements Agen
   private readonly baseUrl: string;
   private readonly maxTokens: number;
   private readonly maxHistoryTurns: number;
-  private readonly retryOptions: Required<Pick<KeyedAgentDriverOptions, 'maxRetries' | 'retryBaseDelayMs' | 'sleep'>>;
+  private readonly maxContextBytes: number;
+  private readonly maxResponseBytes: number;
+  private readonly retryOptions: Required<Pick<KeyedAgentDriverOptions,
+    'maxRetries' | 'retryBaseDelayMs' | 'maxRetryDelayMs' | 'retryJitter' | 'sleep'>>;
   private readonly timeoutMs: number;
   private readonly history: Array<{ role: 'user' | 'assistant'; content: string }> = [];
   private activeRequest?: AbortController;
@@ -285,17 +375,30 @@ export class OpenAICompatibleAgentDriver<TObservation = unknown> implements Agen
     this.baseUrl = (options.baseUrl ?? options.defaultBaseUrl).replace(/\/$/, '');
     this.maxTokens = options.maxTokens ?? 800;
     this.maxHistoryTurns = options.maxHistoryTurns ?? 8;
+    this.maxContextBytes = options.maxContextBytes ?? 256 * 1024;
+    this.maxResponseBytes = options.maxResponseBytes ?? 1024 * 1024;
     this.timeoutMs = options.timeoutMs ?? 30_000;
     this.retryOptions = {
       maxRetries: options.maxRetries ?? 2,
       retryBaseDelayMs: options.retryBaseDelayMs ?? 250,
+      maxRetryDelayMs: options.maxRetryDelayMs ?? 30_000,
+      retryJitter: options.retryJitter ?? Math.random,
       sleep: options.sleep ?? defaultSleep,
     };
     assertNonNegativeInteger(this.maxHistoryTurns, 'maxHistoryTurns');
+    if (!Number.isSafeInteger(this.maxContextBytes) || this.maxContextBytes < 1) {
+      throw new RangeError('maxContextBytes must be a positive safe integer');
+    }
+    if (!Number.isSafeInteger(this.maxResponseBytes) || this.maxResponseBytes < 1) {
+      throw new RangeError('maxResponseBytes must be a positive safe integer');
+    }
     assertNonNegativeInteger(this.timeoutMs, 'timeoutMs');
     assertNonNegativeInteger(this.retryOptions.maxRetries, 'maxRetries');
     if (!Number.isFinite(this.retryOptions.retryBaseDelayMs) || this.retryOptions.retryBaseDelayMs < 0) {
       throw new RangeError('retryBaseDelayMs must be a non-negative finite number');
+    }
+    if (!Number.isFinite(this.retryOptions.maxRetryDelayMs) || this.retryOptions.maxRetryDelayMs < 0) {
+      throw new RangeError('maxRetryDelayMs must be a non-negative finite number');
     }
     if (!options.apiKey) throw new TypeError('apiKey must not be empty');
     if (!this.model) throw new TypeError(`model is required for keyed provider ${id}`);
@@ -314,11 +417,14 @@ export class OpenAICompatibleAgentDriver<TObservation = unknown> implements Agen
   }
 
   async act(context: AgentDriverContext<TObservation>): Promise<AgentDecision> {
+    if (this.activeRequest) throw new Error('agent request already in progress');
     const controller = new AbortController();
     this.activeRequest = controller;
     const userMessage = formatAgentContext(context);
     try {
       const signal = providerSignal(this.timeoutMs, [context.signal, controller.signal])!;
+      const prompt = systemPrompt(this.options, context);
+      const messages = boundedMessages(prompt, this.history, userMessage, this.maxContextBytes);
       const response = await requestWithRetries(this.request, `${this.baseUrl}/chat/completions`, {
         method: 'POST',
         signal,
@@ -330,15 +436,11 @@ export class OpenAICompatibleAgentDriver<TObservation = unknown> implements Agen
         body: JSON.stringify({
           model: this.model,
           max_tokens: this.maxTokens,
-          messages: [
-            { role: 'system', content: systemPrompt(this.options, context) },
-            ...this.history,
-            { role: 'user', content: userMessage },
-          ],
+          messages,
         }),
       }, signal, this.retryOptions);
-      if (!response.ok) throw await responseError(response, this.options.apiKey);
-      const raw: unknown = await response.json();
+      if (!response.ok) throw await responseError(response, this.options.apiKey, this.maxResponseBytes);
+      const raw: unknown = JSON.parse(await limitedResponseText(response, this.maxResponseBytes));
       const payload = record(raw);
       const choices = Array.isArray(payload?.choices) ? payload.choices : [];
       const first = record(choices[0]);
@@ -353,6 +455,10 @@ export class OpenAICompatibleAgentDriver<TObservation = unknown> implements Agen
       }, context);
       this.history.push({ role: 'user', content: userMessage }, { role: 'assistant', content: message.content });
       this.history.splice(0, Math.max(0, this.history.length - this.maxHistoryTurns * 2));
+      while (this.history.length > 2
+        && this.history.reduce((total, item) => total + utf8Bytes(item.content), 0) > this.maxContextBytes) {
+        this.history.splice(0, 2);
+      }
       return decision;
     } finally {
       if (this.activeRequest === controller) this.activeRequest = undefined;
@@ -368,7 +474,10 @@ export class AnthropicAgentDriver<TObservation = unknown> implements AgentDriver
   private readonly baseUrl: string;
   private readonly maxTokens: number;
   private readonly maxHistoryTurns: number;
-  private readonly retryOptions: Required<Pick<KeyedAgentDriverOptions, 'maxRetries' | 'retryBaseDelayMs' | 'sleep'>>;
+  private readonly maxContextBytes: number;
+  private readonly maxResponseBytes: number;
+  private readonly retryOptions: Required<Pick<KeyedAgentDriverOptions,
+    'maxRetries' | 'retryBaseDelayMs' | 'maxRetryDelayMs' | 'retryJitter' | 'sleep'>>;
   private readonly timeoutMs: number;
   private readonly history: Array<{ role: 'user' | 'assistant'; content: string }> = [];
   private activeRequest?: AbortController;
@@ -385,17 +494,30 @@ export class AnthropicAgentDriver<TObservation = unknown> implements AgentDriver
     this.baseUrl = (options.baseUrl ?? options.defaultBaseUrl).replace(/\/$/, '');
     this.maxTokens = options.maxTokens ?? 800;
     this.maxHistoryTurns = options.maxHistoryTurns ?? 8;
+    this.maxContextBytes = options.maxContextBytes ?? 256 * 1024;
+    this.maxResponseBytes = options.maxResponseBytes ?? 1024 * 1024;
     this.timeoutMs = options.timeoutMs ?? 30_000;
     this.retryOptions = {
       maxRetries: options.maxRetries ?? 2,
       retryBaseDelayMs: options.retryBaseDelayMs ?? 250,
+      maxRetryDelayMs: options.maxRetryDelayMs ?? 30_000,
+      retryJitter: options.retryJitter ?? Math.random,
       sleep: options.sleep ?? defaultSleep,
     };
     assertNonNegativeInteger(this.maxHistoryTurns, 'maxHistoryTurns');
+    if (!Number.isSafeInteger(this.maxContextBytes) || this.maxContextBytes < 1) {
+      throw new RangeError('maxContextBytes must be a positive safe integer');
+    }
+    if (!Number.isSafeInteger(this.maxResponseBytes) || this.maxResponseBytes < 1) {
+      throw new RangeError('maxResponseBytes must be a positive safe integer');
+    }
     assertNonNegativeInteger(this.timeoutMs, 'timeoutMs');
     assertNonNegativeInteger(this.retryOptions.maxRetries, 'maxRetries');
     if (!Number.isFinite(this.retryOptions.retryBaseDelayMs) || this.retryOptions.retryBaseDelayMs < 0) {
       throw new RangeError('retryBaseDelayMs must be a non-negative finite number');
+    }
+    if (!Number.isFinite(this.retryOptions.maxRetryDelayMs) || this.retryOptions.maxRetryDelayMs < 0) {
+      throw new RangeError('maxRetryDelayMs must be a non-negative finite number');
     }
     if (!options.apiKey) throw new TypeError('apiKey must not be empty');
     if (!this.model) throw new TypeError(`model is required for keyed provider ${id}`);
@@ -414,11 +536,14 @@ export class AnthropicAgentDriver<TObservation = unknown> implements AgentDriver
   }
 
   async act(context: AgentDriverContext<TObservation>): Promise<AgentDecision> {
+    if (this.activeRequest) throw new Error('agent request already in progress');
     const controller = new AbortController();
     this.activeRequest = controller;
     const userMessage = formatAgentContext(context);
     try {
       const signal = providerSignal(this.timeoutMs, [context.signal, controller.signal])!;
+      const prompt = systemPrompt(this.options, context);
+      const messages = boundedMessages(prompt, this.history, userMessage, this.maxContextBytes);
       const response = await requestWithRetries(this.request, `${this.baseUrl}/messages`, {
         method: 'POST',
         signal,
@@ -431,12 +556,12 @@ export class AnthropicAgentDriver<TObservation = unknown> implements AgentDriver
         body: JSON.stringify({
           model: this.model,
           max_tokens: this.maxTokens,
-          system: systemPrompt(this.options, context),
-          messages: [...this.history, { role: 'user', content: userMessage }],
+          system: prompt,
+          messages: messages.slice(1),
         }),
       }, signal, this.retryOptions);
-      if (!response.ok) throw await responseError(response, this.options.apiKey);
-      const raw: unknown = await response.json();
+      if (!response.ok) throw await responseError(response, this.options.apiKey, this.maxResponseBytes);
+      const raw: unknown = JSON.parse(await limitedResponseText(response, this.maxResponseBytes));
       const payload = record(raw);
       const content = Array.isArray(payload?.content) ? payload.content : [];
       const text = content
@@ -455,6 +580,10 @@ export class AnthropicAgentDriver<TObservation = unknown> implements AgentDriver
       }, context);
       this.history.push({ role: 'user', content: userMessage }, { role: 'assistant', content: text });
       this.history.splice(0, Math.max(0, this.history.length - this.maxHistoryTurns * 2));
+      while (this.history.length > 2
+        && this.history.reduce((total, item) => total + utf8Bytes(item.content), 0) > this.maxContextBytes) {
+        this.history.splice(0, 2);
+      }
       return decision;
     } finally {
       if (this.activeRequest === controller) this.activeRequest = undefined;

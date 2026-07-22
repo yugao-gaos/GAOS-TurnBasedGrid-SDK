@@ -10,11 +10,15 @@ Python wheels and source distributions are attached to each GitHub release.
 Download the wheel for the version you want, then install it:
 
 ```sh
-pip install gaos_turn_based_grid_sdk-0.9.0-py3-none-any.whl
+pip install gaos_turn_based_grid_sdk-0.11.0-py3-none-any.whl
 ```
 
 The distribution is named `gaos-turn-based-grid-sdk`. The stable import name
 remains `agilabs_arena` for compatibility.
+
+Async applications can use `AsyncArenaClient`, which runs the same validated,
+bounded requests in worker threads without blocking the event loop. The
+existing synchronous `ArenaClient` API remains unchanged.
 
 ## Hosted client
 

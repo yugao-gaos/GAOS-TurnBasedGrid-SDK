@@ -52,6 +52,13 @@ network room while its nested last resolved game turn still says `playing`.
 The hosted preview is disabled unless the operator configures the Arena adapter
 and map; it does not consume the future paid Arena-ticket economy.
 
+Async harnesses can use `AsyncArenaClient` and await the corresponding client
+methods. It delegates blocking standard-library HTTP work through
+`asyncio.to_thread`, preserving the same validation and response-size limits.
+Calls on one async client are serialized because the underlying cursor bindings
+are mutable. Cancelling an awaiting task cannot stop an already-running
+standard-library HTTP thread; configure `timeout` to bound that work.
+
 ```python
 from agilabs_arena import ArenaEnv
 
