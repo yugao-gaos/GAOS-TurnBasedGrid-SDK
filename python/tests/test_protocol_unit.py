@@ -42,6 +42,27 @@ def test_rejects_unversioned_turn_shape():
         parse_turn_result({**envelope(), "revision": -1})
 
 
+def test_pending_participants_are_unique_disjoint_and_accepted_is_submitted():
+    pending = envelope(
+        "pending",
+        turnId="opaque-turn-token",
+        submittedParticipants=["north"],
+        awaitingParticipants=["south"],
+        acceptedParticipantId="north",
+    )
+    assert parse_turn_result(pending)["turnId"] == "opaque-turn-token"
+    with pytest.raises(ProtocolMismatchError, match="unique"):
+        parse_turn_result({**pending, "submittedParticipants": ["north", "north"]})
+    with pytest.raises(ProtocolMismatchError, match="disjoint"):
+        parse_turn_result({**pending, "awaitingParticipants": ["north"]})
+    with pytest.raises(ProtocolMismatchError, match="must await"):
+        parse_turn_result({**pending, "awaitingParticipants": []})
+    with pytest.raises(ProtocolMismatchError, match="must be submitted"):
+        parse_turn_result({**pending, "acceptedParticipantId": "south"})
+    with pytest.raises(ProtocolMismatchError, match="must be submitted"):
+        parse_turn_result({**pending, "acceptedParticipantId": None})
+
+
 def test_turn_retains_unit_integrity_and_character_metadata():
     unit = {
         "id": "hacker",
@@ -154,7 +175,7 @@ def test_explicit_empty_participants_is_not_silently_changed_to_solo():
 def test_preserves_stable_conflict_codes(monkeypatch):
     response = io.BytesIO(b'{"error":"expected a newer cursor","code":"stale_turn"}')
 
-    def fail(_request):
+    def fail(_request, **_kwargs):
         raise urllib.error.HTTPError(
             "https://example.test/v1/sessions/s1/turn",
             409,
@@ -168,6 +189,26 @@ def test_preserves_stable_conflict_codes(monkeypatch):
         ArenaClient("https://example.test").get_turn_envelope("s1")
     assert caught.value.status == 409
     assert caught.value.code == "stale_turn"
+
+
+def test_configures_timeout_quotes_paths_and_preserves_non_json_error(monkeypatch):
+    def fail(request, **kwargs):
+        assert request.full_url.endswith("/v1/sessions/room%2Fwith%20space/turn")
+        assert kwargs["timeout"] == 4.5
+        raise urllib.error.HTTPError(
+            request.full_url,
+            502,
+            "Bad Gateway",
+            {},
+            io.BytesIO(b"upstream unavailable"),
+        )
+
+    monkeypatch.setattr("urllib.request.urlopen", fail)
+    with pytest.raises(ArenaAPIError) as caught:
+        ArenaClient("https://example.test", timeout=4.5).get_turn_envelope("room/with space")
+    assert caught.value.status == 502
+    assert caught.value.error == "upstream unavailable"
+    assert caught.value.body == "upstream unavailable"
 
 
 def test_discovers_hosted_arena_catalog():

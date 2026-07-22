@@ -19,7 +19,7 @@ Hosted live Arena play is explicit and seat-authenticated:
 ```python
 from agilabs_arena import ArenaClient
 
-client = ArenaClient("https://api.zonoid.ai", api_key="ak_...")
+client = ArenaClient("https://api.zonoid.ai", api_key="ak_...", timeout=30.0)
 catalog = client.arena_catalog()  # stable map summaries + curated team ids
 ticket = client.join_arena_queue(
     "arena-s1-1",

@@ -21,7 +21,7 @@ remains `agilabs_arena` for compatibility.
 ```python
 from agilabs_arena import ArenaClient
 
-arena = ArenaClient("https://api.zonoid.ai", api_key="ak_...")
+arena = ArenaClient("https://api.zonoid.ai", api_key="ak_...", timeout=30.0)
 session_id, turn = arena.create_session(
     game_mode="challenge",
     play_method="human",

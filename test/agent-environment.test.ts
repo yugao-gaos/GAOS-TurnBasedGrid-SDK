@@ -109,6 +109,29 @@ describe('AgentEnvironment', () => {
     second.replay([{ id: 'advance' }, { id: 'jump', index: 2 }]);
     expect(first.transcript()).toEqual(second.transcript());
   });
+
+  it('snapshots level data at reset and isolates returned transcripts', () => {
+    const level = { goal: 3 };
+    const env = new AgentEnvironment({ reducer, level, seed: 1 });
+    env.reset();
+    level.goal = 99;
+    const first = env.transcript();
+    expect(first.level).toEqual({ goal: 3 });
+    first.level.goal = 77;
+    expect(env.transcript().level).toEqual({ goal: 3 });
+  });
+
+  it('supports an explicit snapshot function for non-cloneable level values', () => {
+    const level = { goal: 3, helper: () => 3 };
+    const customReducer: GridReducer<typeof level, State> = reducer;
+    const env = new AgentEnvironment({
+      reducer: customReducer,
+      level,
+      snapshotLevel: ({ goal, helper }) => ({ goal, helper }),
+    });
+    expect(env.reset().done).toBe(false);
+    expect(env.transcript().level.helper()).toBe(3);
+  });
 });
 
 describe('agent evaluation', () => {

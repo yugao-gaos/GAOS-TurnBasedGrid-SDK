@@ -97,9 +97,18 @@ export function solveGridLevel<TLevel, TState, TView extends GridTurnView>(
   options: GridSolverOptions<TState>,
 ): GridSolveResult {
   const maxNodes = options.maxNodes ?? 5_000_000;
+  if (!Number.isSafeInteger(options.maxActions) || options.maxActions < 0) {
+    throw new RangeError('maxActions must be a non-negative safe integer');
+  }
+  if (!Number.isSafeInteger(maxNodes) || maxNodes <= 0) {
+    throw new RangeError('maxNodes must be a positive safe integer');
+  }
   const keyOf = options.stateKey ?? defaultStateKey;
   const actionsFor = options.actions ?? enumerateGridActions;
   const start = reducer.init(level, options.seed ?? 1);
+  if (reducer.view(start).status === 'won') {
+    return { min: 0, capped: false, explored: 1, actions: [] };
+  }
   let frontier: Array<{ state: TState; nodeId: number }> = [{ state: start, nodeId: 0 }];
   const seen = new Set<string>([stateFingerprint(keyOf(start))]);
 

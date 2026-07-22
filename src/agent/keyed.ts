@@ -26,6 +26,14 @@ export interface KeyedAgentDriverOptions {
   maxTokens?: number;
   headers?: Readonly<Record<string, string>>;
   systemPrompt?: string;
+  /** Number of completed user/assistant turns retained. Defaults to 8. */
+  maxHistoryTurns?: number;
+  /** Retries for HTTP 429 and 5xx responses. Defaults to 2. */
+  maxRetries?: number;
+  /** Initial exponential backoff delay in milliseconds. Defaults to 250. */
+  retryBaseDelayMs?: number;
+  /** Optional delay implementation for deterministic harnesses. */
+  sleep?: (delayMs: number, signal: AbortSignal) => Promise<void>;
 }
 
 export interface KeyedProvider {
@@ -182,6 +190,44 @@ async function responseError(response: Response, apiKey: string): Promise<Error>
   return secretSafeError(`agent provider returned HTTP ${response.status}${body ? `: ${body}` : ''}`, apiKey);
 }
 
+function defaultSleep(delayMs: number, signal: AbortSignal): Promise<void> {
+  if (delayMs === 0) return Promise.resolve();
+  if (signal.aborted) return Promise.reject(signal.reason);
+  return new Promise((resolve, reject) => {
+    const onAbort = (): void => {
+      clearTimeout(timer);
+      reject(signal.reason);
+    };
+    const timer = setTimeout(() => {
+      signal.removeEventListener('abort', onAbort);
+      resolve();
+    }, delayMs);
+    signal.addEventListener('abort', onAbort, { once: true });
+  });
+}
+
+function assertNonNegativeInteger(value: number, name: string): void {
+  if (!Number.isSafeInteger(value) || value < 0) {
+    throw new RangeError(`${name} must be a non-negative safe integer`);
+  }
+}
+
+async function requestWithRetries(
+  request: AgentFetch,
+  url: string,
+  init: RequestInit,
+  signal: AbortSignal,
+  options: Required<Pick<KeyedAgentDriverOptions, 'maxRetries' | 'retryBaseDelayMs' | 'sleep'>>,
+): Promise<Response> {
+  for (let attempt = 0; ; attempt++) {
+    const response = await request(url, init);
+    const transient = response.status === 429 || response.status >= 500;
+    if (!transient || attempt >= options.maxRetries) return response;
+    await response.body?.cancel();
+    await options.sleep(options.retryBaseDelayMs * (2 ** attempt), signal);
+  }
+}
+
 function assertLegal<TObservation>(
   decision: AgentDecision,
   context: AgentDriverContext<TObservation>,
@@ -206,6 +252,8 @@ export class OpenAICompatibleAgentDriver<TObservation = unknown> implements Agen
   private readonly model: string;
   private readonly baseUrl: string;
   private readonly maxTokens: number;
+  private readonly maxHistoryTurns: number;
+  private readonly retryOptions: Required<Pick<KeyedAgentDriverOptions, 'maxRetries' | 'retryBaseDelayMs' | 'sleep'>>;
   private readonly history: Array<{ role: 'user' | 'assistant'; content: string }> = [];
   private activeRequest?: AbortController;
 
@@ -220,6 +268,17 @@ export class OpenAICompatibleAgentDriver<TObservation = unknown> implements Agen
     this.model = options.model ?? options.defaultModel ?? '';
     this.baseUrl = (options.baseUrl ?? options.defaultBaseUrl).replace(/\/$/, '');
     this.maxTokens = options.maxTokens ?? 800;
+    this.maxHistoryTurns = options.maxHistoryTurns ?? 8;
+    this.retryOptions = {
+      maxRetries: options.maxRetries ?? 2,
+      retryBaseDelayMs: options.retryBaseDelayMs ?? 250,
+      sleep: options.sleep ?? defaultSleep,
+    };
+    assertNonNegativeInteger(this.maxHistoryTurns, 'maxHistoryTurns');
+    assertNonNegativeInteger(this.retryOptions.maxRetries, 'maxRetries');
+    if (!Number.isFinite(this.retryOptions.retryBaseDelayMs) || this.retryOptions.retryBaseDelayMs < 0) {
+      throw new RangeError('retryBaseDelayMs must be a non-negative finite number');
+    }
     if (!options.apiKey) throw new TypeError('apiKey must not be empty');
     if (!this.model) throw new TypeError(`model is required for keyed provider ${id}`);
   }
@@ -241,9 +300,10 @@ export class OpenAICompatibleAgentDriver<TObservation = unknown> implements Agen
     this.activeRequest = controller;
     const userMessage = formatAgentContext(context);
     try {
-      const response = await this.request(`${this.baseUrl}/chat/completions`, {
+      const signal = context.signal ? AbortSignal.any([context.signal, controller.signal]) : controller.signal;
+      const response = await requestWithRetries(this.request, `${this.baseUrl}/chat/completions`, {
         method: 'POST',
-        signal: context.signal ? AbortSignal.any([context.signal, controller.signal]) : controller.signal,
+        signal,
         headers: {
           authorization: `Bearer ${this.options.apiKey}`,
           'content-type': 'application/json',
@@ -258,7 +318,7 @@ export class OpenAICompatibleAgentDriver<TObservation = unknown> implements Agen
             { role: 'user', content: userMessage },
           ],
         }),
-      });
+      }, signal, this.retryOptions);
       if (!response.ok) throw await responseError(response, this.options.apiKey);
       const raw: unknown = await response.json();
       const payload = record(raw);
@@ -274,6 +334,7 @@ export class OpenAICompatibleAgentDriver<TObservation = unknown> implements Agen
         usage: usage(tokens?.prompt_tokens, tokens?.completion_tokens),
       }, context);
       this.history.push({ role: 'user', content: userMessage }, { role: 'assistant', content: message.content });
+      this.history.splice(0, Math.max(0, this.history.length - this.maxHistoryTurns * 2));
       return decision;
     } finally {
       if (this.activeRequest === controller) this.activeRequest = undefined;
@@ -288,6 +349,8 @@ export class AnthropicAgentDriver<TObservation = unknown> implements AgentDriver
   private readonly model: string;
   private readonly baseUrl: string;
   private readonly maxTokens: number;
+  private readonly maxHistoryTurns: number;
+  private readonly retryOptions: Required<Pick<KeyedAgentDriverOptions, 'maxRetries' | 'retryBaseDelayMs' | 'sleep'>>;
   private readonly history: Array<{ role: 'user' | 'assistant'; content: string }> = [];
   private activeRequest?: AbortController;
 
@@ -302,6 +365,17 @@ export class AnthropicAgentDriver<TObservation = unknown> implements AgentDriver
     this.model = options.model ?? options.defaultModel ?? '';
     this.baseUrl = (options.baseUrl ?? options.defaultBaseUrl).replace(/\/$/, '');
     this.maxTokens = options.maxTokens ?? 800;
+    this.maxHistoryTurns = options.maxHistoryTurns ?? 8;
+    this.retryOptions = {
+      maxRetries: options.maxRetries ?? 2,
+      retryBaseDelayMs: options.retryBaseDelayMs ?? 250,
+      sleep: options.sleep ?? defaultSleep,
+    };
+    assertNonNegativeInteger(this.maxHistoryTurns, 'maxHistoryTurns');
+    assertNonNegativeInteger(this.retryOptions.maxRetries, 'maxRetries');
+    if (!Number.isFinite(this.retryOptions.retryBaseDelayMs) || this.retryOptions.retryBaseDelayMs < 0) {
+      throw new RangeError('retryBaseDelayMs must be a non-negative finite number');
+    }
     if (!options.apiKey) throw new TypeError('apiKey must not be empty');
     if (!this.model) throw new TypeError(`model is required for keyed provider ${id}`);
   }
@@ -323,9 +397,10 @@ export class AnthropicAgentDriver<TObservation = unknown> implements AgentDriver
     this.activeRequest = controller;
     const userMessage = formatAgentContext(context);
     try {
-      const response = await this.request(`${this.baseUrl}/messages`, {
+      const signal = context.signal ? AbortSignal.any([context.signal, controller.signal]) : controller.signal;
+      const response = await requestWithRetries(this.request, `${this.baseUrl}/messages`, {
         method: 'POST',
-        signal: context.signal ? AbortSignal.any([context.signal, controller.signal]) : controller.signal,
+        signal,
         headers: {
           'x-api-key': this.options.apiKey,
           'anthropic-version': '2023-06-01',
@@ -338,7 +413,7 @@ export class AnthropicAgentDriver<TObservation = unknown> implements AgentDriver
           system: systemPrompt(this.options, context),
           messages: [...this.history, { role: 'user', content: userMessage }],
         }),
-      });
+      }, signal, this.retryOptions);
       if (!response.ok) throw await responseError(response, this.options.apiKey);
       const raw: unknown = await response.json();
       const payload = record(raw);
@@ -358,6 +433,7 @@ export class AnthropicAgentDriver<TObservation = unknown> implements AgentDriver
         usage: usage(tokens?.input_tokens, tokens?.output_tokens),
       }, context);
       this.history.push({ role: 'user', content: userMessage }, { role: 'assistant', content: text });
+      this.history.splice(0, Math.max(0, this.history.length - this.maxHistoryTurns * 2));
       return decision;
     } finally {
       if (this.activeRequest === controller) this.activeRequest = undefined;
