@@ -58,6 +58,11 @@ export type ResourceTransactionFailure =
       attempted: number;
       min?: number;
       max?: number;
+    }
+  | {
+      code: 'resource_arithmetic_overflow';
+      resourceId: string;
+      effectIndex: number;
     };
 
 export type ResourceTransactionPlan =
@@ -233,6 +238,18 @@ export function planResourceTransaction(
     }
     const previous = Object.hasOwn(next, effect.resourceId) ? next[effect.resourceId]! : definition.initial;
     const current = previous + effect.delta;
+    if (!Number.isFinite(current)) {
+      return {
+        ok: false,
+        balances: original,
+        changes: [],
+        failure: {
+          code: 'resource_arithmetic_overflow',
+          resourceId: effect.resourceId,
+          effectIndex: index,
+        },
+      };
+    }
     if ((definition.min !== undefined && current < definition.min)
       || (definition.max !== undefined && current > definition.max)) {
       return {

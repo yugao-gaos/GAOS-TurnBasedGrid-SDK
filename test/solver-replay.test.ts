@@ -138,6 +138,28 @@ describe('generic transcript rechecking', () => {
     expect(recheckGridTranscript(reducer, malformed, []).problems.join('\n')).toMatch(/bijection/);
   });
 
+  it('reports non-array actions and malformed entries instead of throwing', () => {
+    for (const malformed of [null, {}, 'actions']) {
+      const result = recheckGridTranscript(
+        reducer,
+        header,
+        malformed as unknown as [],
+      );
+      expect(result.ok).toBe(false);
+    }
+
+    const malformedEntries = [
+      null, [], 7, {}, { n: 0, wireId: null, canonicalId: 'Action 1' },
+    ] as unknown as [];
+    const result = recheckGridTranscript(
+      reducer,
+      header,
+      malformedEntries,
+    );
+    expect(result.ok).toBe(false);
+    expect(result.problems.join('\n')).toMatch(/action at index/);
+  });
+
   it('rejects gaps and actions after terminal state', () => {
     const gap = recheckGridTranscript(reducer, { ...header, actionsUsed: 3 }, [
       { n: 0, wireId: 'Action 1', canonicalId: 'Action 1' },

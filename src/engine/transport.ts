@@ -64,8 +64,15 @@ export function resolveTransportRun<TState>(
   let lastMoved = 0;
   while (passes < options.maxPasses) {
     lastMoved = options.step(state, passes);
+    if (!Number.isSafeInteger(lastMoved) || lastMoved < 0) {
+      throw new RangeError('transport step result must be a non-negative safe integer');
+    }
     if (lastMoved === 0) return { state, passes, moves, completed: true };
-    moves += lastMoved;
+    const cumulativeMoves = moves + lastMoved;
+    if (!Number.isSafeInteger(cumulativeMoves)) {
+      throw new RangeError('transport cumulative moves must be a safe integer');
+    }
+    moves = cumulativeMoves;
     passes += 1;
   }
   return { state, passes, moves, completed: lastMoved === 0 };

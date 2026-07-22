@@ -608,6 +608,7 @@ export class ArenaClient {
   restoreSessionBinding(value: unknown): SessionBinding {
     const binding = parseSessionBinding(value);
     this.bindings.set(binding.sessionId, binding);
+    this.observedArenaCursors.delete(binding.sessionId);
     return { ...binding };
   }
 
@@ -912,7 +913,7 @@ export class ArenaClient {
     command: TCommand,
     opts: {
       submissionId?: string;
-      cursor?: TurnCursor;
+      cursor?: TurnCursor & { controlRevision?: number };
       controlRevision?: number;
       signal?: AbortSignal;
     } = {},
@@ -934,8 +935,8 @@ export class ArenaClient {
     }
     const cursor = originalCursor ?? binding;
     if (!cursor) throw new ProtocolMismatchError('Arena session cursor unavailable');
-    const controlRevision = opts.controlRevision ?? observedCursor?.controlRevision
-      ?? binding?.controlRevision;
+    const controlRevision = opts.controlRevision ?? opts.cursor?.controlRevision
+      ?? (opts.cursor ? undefined : observedCursor?.controlRevision ?? binding?.controlRevision);
     if (!Number.isSafeInteger(controlRevision) || controlRevision! < 0) {
       throw new ProtocolMismatchError('Arena controlRevision unavailable');
     }

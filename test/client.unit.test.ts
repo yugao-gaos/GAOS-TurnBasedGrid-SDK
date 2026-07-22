@@ -506,6 +506,58 @@ describe('ArenaClient v1 protocol adapter', () => {
     expect(() => client.restoreSessionBinding({ ...restored, revision: -1 })).toThrow('binding');
   });
 
+  it('restored Arena bindings override an observed cursor for explicit retries', async () => {
+    const calls: RequestInit[] = [];
+    const responses = [
+      new Response(JSON.stringify(turnEnvelope('m1', 5, { ...TURN, controlRevision: 5 }))),
+      new Response(JSON.stringify(turnEnvelope('m1', 1, { ...TURN, controlRevision: 1 }))),
+    ];
+    const client = new ArenaClient('https://example.test', undefined, {
+      fetch: vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+        calls.push(init!);
+        return responses.shift()!;
+      }),
+    });
+    await client.getArenaTurnEnvelope('m1');
+    client.restoreSessionBinding({
+      protocol: 'agilabs.turns', protocolVersion: '1.0',
+      sessionId: 'm1', turnId: 'm1:0', revision: 0,
+      participantId: 'north', controlRevision: 0,
+    });
+    await client.submitArenaIntent('m1', { id: 'Action 1' }, { submissionId: 'retry-0' });
+
+    expect(JSON.parse(String(calls[1]!.body))).toMatchObject({
+      turnId: 'm1:0', revision: 0, submissionId: 'retry-0',
+      extensions: { 'agilabs.arena': { controlRevision: 0 } },
+    });
+  });
+
+  it('does not borrow a newer control revision for an explicit Arena cursor', async () => {
+    const request = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) => new Response(JSON.stringify(
+      turnEnvelope('m1', 1, { ...TURN, controlRevision: 1 }),
+    )));
+    const client = new ArenaClient('https://example.test', undefined, { fetch: request });
+    client.restoreSessionBinding({
+      protocol: 'agilabs.turns', protocolVersion: '1.0',
+      sessionId: 'm1', turnId: 'm1:5', revision: 5,
+      participantId: 'north', controlRevision: 5,
+    });
+
+    await expect(client.submitArenaIntent('m1', { id: 'Action 1' }, {
+      submissionId: 'retry-0', cursor: { turnId: 'm1:0', revision: 0 },
+    })).rejects.toThrow(/controlRevision unavailable/);
+    expect(request).not.toHaveBeenCalled();
+
+    await client.submitArenaIntent('m1', { id: 'Action 1' }, {
+      submissionId: 'retry-0',
+      cursor: { turnId: 'm1:0', revision: 0, controlRevision: 0 },
+    });
+    expect(JSON.parse(String(request.mock.calls[0]![1]!.body))).toMatchObject({
+      turnId: 'm1:0', revision: 0,
+      extensions: { 'agilabs.arena': { controlRevision: 0 } },
+    });
+  });
+
   it('does not fetch a newer cursor for an ambiguous explicit retry key', async () => {
     const request = vi.fn(async () => new Response(JSON.stringify(turnEnvelope('s1', 1, TURN))));
     const client = new ArenaClient('https://example.test', undefined, { fetch: request });

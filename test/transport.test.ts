@@ -45,6 +45,19 @@ describe('directed transport', () => {
     expect(() => resolveTransportRun({}, { maxPasses: 0, step: () => 0 }))
       .toThrow(/positive/);
   });
+
+  it('rejects invalid step counts and unsafe cumulative totals', () => {
+    for (const moved of [Number.NaN, -1, 0.5]) {
+      expect(() => resolveTransportRun({}, { maxPasses: 1, step: () => moved }))
+        .toThrow(/non-negative safe integer/);
+    }
+
+    let pass = 0;
+    expect(() => resolveTransportRun({}, {
+      maxPasses: 2,
+      step: () => [Number.MAX_SAFE_INTEGER, 1][pass++]!,
+    })).toThrow(/cumulative/);
+  });
 });
 
 describe('linked components and interlocks', () => {

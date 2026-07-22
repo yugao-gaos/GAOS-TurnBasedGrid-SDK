@@ -66,6 +66,30 @@ describe('simultaneous movement', () => {
     }
   });
 
+  it('resolves blockers and destination contests independently of input order', () => {
+    const proposals: Mover[] = [
+      mover('a', [0, 0], [0, 0], 0),
+      { ...mover('b', [2, 0], [0, 0], 0), footprint: { width: 2, height: 1 } },
+      mover('c', [0, 1], [1, 0], 0),
+    ];
+    const permutations = [
+      proposals,
+      [proposals[0]!, proposals[2]!, proposals[1]!],
+      [proposals[1]!, proposals[0]!, proposals[2]!],
+      [proposals[1]!, proposals[2]!, proposals[0]!],
+      [proposals[2]!, proposals[0]!, proposals[1]!],
+      [proposals[2]!, proposals[1]!, proposals[0]!],
+    ];
+
+    for (const ordered of permutations) {
+      const result = resolveMoves(ordered, () => false);
+      expect([...result.keys()]).toEqual(['a', 'b', 'c']);
+      expect(Object.fromEntries(result)).toEqual({
+        a: [0, 0], b: [2, 0], c: [1, 0],
+      });
+    }
+  });
+
   it('rejects malformed or ambiguous mover inputs', () => {
     expect(() => resolveMoves([
       mover('same', [1, 1], [2, 1]),
