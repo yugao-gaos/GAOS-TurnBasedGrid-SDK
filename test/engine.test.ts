@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  aiActionLimitExceeded,
   budgetFailure,
   resolveMoves,
   roll,
@@ -100,6 +101,11 @@ describe('scoring and budgets', () => {
       .toBe('out_of_action_budget');
     expect(budgetFailure({ actionsUsed: 7, maxActions: 8, energyUsed: 3, energyCap: 4 }))
       .toBeNull();
+  });
+
+  it('checks the AI action guardrail independently of resources', () => {
+    expect(aiActionLimitExceeded({ actionsUsed: 8, maxActions: 8 })).toBe(true);
+    expect(aiActionLimitExceeded({ actionsUsed: 7, maxActions: 8 })).toBe(false);
   });
 
   it('suggests the existing authored threshold ratios', () => {

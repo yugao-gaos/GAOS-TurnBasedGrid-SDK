@@ -1,7 +1,8 @@
-# Scoring and budgets
+# Scoring and AI action limits
 
-The scoring helpers implement a small product-neutral star model and a stable
-failure precedence. Products supply all authored thresholds and resource caps.
+The scoring helpers implement a small product-neutral star model. AI action
+limits are separate runtime guardrails; product economy belongs to the generic
+[resource transaction system](resources.md).
 
 ## Star thresholds
 
@@ -18,7 +19,22 @@ threshold. It does not validate authored data. A completed run always receives
 one, two, or three stars; failure and incomplete-run policy belongs outside this
 function.
 
-## Budget failure
+## AI action limit
+
+`aiActionLimitExceeded` checks the runtime guardrail independently of product
+resources:
+
+```ts
+if (aiActionLimitExceeded({ actionsUsed, maxActions })) {
+  // stop this agent run
+}
+```
+
+The deprecated `budgetFailure` helper remains for compatibility with existing
+integrations. New code should model energy as a product-defined resource and
+use resource transaction failures for affordability.
+
+## Deprecated combined budget failure
 
 `budgetFailure` compares cumulative usage with caps using `>=`:
 
@@ -61,4 +77,3 @@ Changing authored thresholds does not require changing the SDK engine.
 - Define whether rejected/no-op actions consume budget.
 - Apply costs and terminal checks at one documented phase.
 - Store thresholds and caps with the level version used by replay.
-
