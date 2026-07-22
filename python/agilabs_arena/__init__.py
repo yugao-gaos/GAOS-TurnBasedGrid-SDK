@@ -8,6 +8,7 @@ from .client import (
     IllegalActionRejected,
     ProtocolMismatchError,
     Turn,
+    parse_session_binding,
     parse_turn_result,
 )
 from .env import ArenaEnv
@@ -38,5 +39,6 @@ __all__ = [
     "ProtocolMismatchError",
     "Turn",
     "parse_turn_result",
+    "parse_session_binding",
 ]
 __version__ = "0.11.0"

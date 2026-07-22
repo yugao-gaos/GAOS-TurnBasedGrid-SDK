@@ -29,6 +29,33 @@ describe('resource balances', () => {
       .toThrow(TypeError);
   });
 
+  it('treats prototype names as safe own resource ids', () => {
+    const definitions = JSON.parse('{"toString":{"initial":1},"constructor":{"initial":2},"__proto__":{"initial":3}}');
+    const saved = JSON.parse('{"toString":4,"constructor":5,"__proto__":6,"future":7}');
+    const balances = initializeResourceBalances(defineResources(definitions), saved);
+    const plan = planResourceTransaction(definitions, balances, {
+      id: 'prototype-safe',
+      requirements: [resourceAtLeast('constructor', 5)],
+      effects: [changeResource('__proto__', 1), changeResource('toString', -1)],
+    });
+    expect(plan).toMatchObject({ ok: true, balances: {
+      toString: 3, constructor: 5, __proto__: 7, future: 7,
+    } });
+    expect(Object.hasOwn(plan.balances, '__proto__')).toBe(true);
+    expect(Object.getPrototypeOf(plan.balances)).toBe(Object.prototype);
+  });
+
+  it('rejects empty ids and corrupt working balances', () => {
+    expect(() => resourceAtLeast('', 1)).toThrow(TypeError);
+    expect(() => changeResource(' ', 1)).toThrow(TypeError);
+    expect(() => planResourceTransaction(resources, { energy: Number.NaN }, {
+      id: 'bad', effects: [],
+    })).toThrow(TypeError);
+    expect(() => planResourceTransaction(resources, { energy: 1 }, {
+      id: '', effects: [],
+    })).toThrow(TypeError);
+  });
+
   it('applies multiple resources atomically with authored-order change records', () => {
     const balances = { energy: 10, coins: 2 };
     const plan = planResourceTransaction(resources, balances, {

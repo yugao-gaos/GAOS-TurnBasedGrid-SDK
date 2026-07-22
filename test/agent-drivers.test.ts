@@ -233,4 +233,30 @@ describe('keyed providers', () => {
       fetch: async () => { throw new Error('request not-for-logs rejected'); },
     })).resolves.toEqual({ ok: false, detail: 'Error: request [redacted] rejected' });
   });
+
+  it('applies provider deadlines to requests and key checks with a zero opt-out', async () => {
+    const request = vi.fn<AgentFetch>().mockImplementation(async (_url, init) => {
+      expect(init?.signal).toBeInstanceOf(AbortSignal);
+      return new Response(JSON.stringify({
+        choices: [{ message: { content: '{"action":{"id":"advance"}}' } }],
+      }));
+    });
+    const driver = createKeyedAgentDriver<View>('openai', {
+      apiKey: 'secret-key', model: 'test-model', fetch: request,
+    });
+    await driver.act({
+      observation: reducer.view(reducer.init({ goal: 2 }, 1)),
+      legalActions: [{ id: 'advance' }], step: 0,
+    });
+    const provider = createDefaultKeyedProviderRegistry().require('openai');
+    const check = vi.fn<AgentFetch>(async (_url, init) => {
+      expect(init?.signal).toBeUndefined();
+      return new Response('');
+    });
+    await expect(provider.check('secret-key', { fetch: check, timeoutMs: 0 }))
+      .resolves.toMatchObject({ ok: true });
+    expect(() => createKeyedAgentDriver('openai', {
+      apiKey: 'secret-key', model: 'test-model', timeoutMs: -1,
+    })).toThrow('timeoutMs');
+  });
 });

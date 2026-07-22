@@ -20,9 +20,11 @@ export function isParticipantId(value: unknown): value is string {
     && !INVALID_PARTICIPANT_ID_CHAR.test(value);
 }
 
-export interface ProtocolExtensions {
-  [key: string]: unknown;
-}
+export type JsonPrimitive = string | number | boolean | null;
+export type JsonValue = JsonPrimitive | JsonObject | JsonValue[];
+export interface JsonObject { [key: string]: JsonValue }
+
+export interface ProtocolExtensions extends JsonObject {}
 
 export interface TurnCursor {
   /** Stable identity of this revision, unique within a session. */
@@ -243,10 +245,17 @@ export function collectIntent<TCommand>(
     ? window.intents[submission.participantId]
     : undefined;
   if (existing) {
-    if (
-      existing.submissionId === submission.submissionId
-      && stableJson(existing.command) === stableJson(submission.command)
-    ) {
+    let exactRetry = false;
+    try {
+      exactRetry = existing.submissionId === submission.submissionId
+        && stableJson(existing.command) === stableJson(submission.command);
+    } catch (error) {
+      throw new IntentCollectionError(
+        'invalid_submission',
+        error instanceof Error ? error.message : 'stored intent must contain plain JSON',
+      );
+    }
+    if (exactRetry) {
       const submittedParticipants = window.participants.filter((id) => hasIntent(window, id));
       const awaitingParticipants = window.participants.filter((id) => !hasIntent(window, id));
       if (awaitingParticipants.length > 0) {
@@ -315,15 +324,93 @@ export function validateIntentSubmission<TCommand>(
   if (typeof submission.submissionId !== 'string' || !submission.submissionId.trim()) {
     throw new IntentCollectionError('invalid_submission', 'submissionId is required');
   }
+  try {
+    assertJsonValue(submission.command, 'command');
+    if (submission.extensions !== undefined) assertJsonObject(submission.extensions, 'extensions');
+  } catch (error) {
+    throw new IntentCollectionError(
+      'invalid_submission',
+      error instanceof Error ? error.message : 'submission must contain plain JSON',
+    );
+  }
+}
+
+/** Reject values whose JSON serialization is lossy, ambiguous, or unsafe. */
+export function assertJsonValue(value: unknown, label = 'value'): asserts value is JsonValue {
+  const active = new WeakSet<object>();
+  const visit = (candidate: unknown, path: string): void => {
+    if (candidate === null || typeof candidate === 'string' || typeof candidate === 'boolean') return;
+    if (typeof candidate === 'number') {
+      if (!Number.isFinite(candidate)) throw new TypeError(`${path} must contain only finite numbers`);
+      return;
+    }
+    if (typeof candidate !== 'object') throw new TypeError(`${path} must contain only plain JSON values`);
+    if (active.has(candidate)) throw new TypeError(`${path} must not contain cycles`);
+    active.add(candidate);
+    try {
+      if (Array.isArray(candidate)) {
+        if (Object.getOwnPropertySymbols(candidate).length > 0) {
+          throw new TypeError(`${path} must not contain symbol keys`);
+        }
+        for (let index = 0; index < candidate.length; index++) {
+          if (!Object.hasOwn(candidate, index)) throw new TypeError(`${path} must not contain sparse arrays`);
+          visit(candidate[index], `${path}[${index}]`);
+        }
+        const names = Object.getOwnPropertyNames(candidate);
+        if (names.some((key) => key !== 'length' && (!/^(0|[1-9]\d*)$/.test(key)
+          || Number(key) >= candidate.length))) {
+          throw new TypeError(`${path} arrays must not contain named properties`);
+        }
+      } else {
+        const prototype = Object.getPrototypeOf(candidate);
+        if (prototype !== Object.prototype && prototype !== null) {
+          throw new TypeError(`${path} must contain only plain objects`);
+        }
+        if (Object.getOwnPropertySymbols(candidate).length > 0) {
+          throw new TypeError(`${path} must not contain symbol keys`);
+        }
+        for (const key of Object.keys(candidate)) {
+          const descriptor = Object.getOwnPropertyDescriptor(candidate, key)!;
+          if (!Object.hasOwn(descriptor, 'value')) {
+            throw new TypeError(`${path} must contain only data properties`);
+          }
+          visit((candidate as Record<string, unknown>)[key], `${path}.${key}`);
+        }
+        if (Object.getOwnPropertyNames(candidate).length !== Object.keys(candidate).length) {
+          throw new TypeError(`${path} must not contain hidden properties`);
+        }
+      }
+    } finally {
+      active.delete(candidate);
+    }
+  };
+  visit(value, label);
+}
+
+export function assertJsonObject(value: unknown, label = 'value'): asserts value is JsonObject {
+  assertJsonValue(value, label);
+  if (value === null || typeof value !== 'object' || Array.isArray(value)) {
+    throw new TypeError(`${label} must be a plain JSON object`);
+  }
+}
+
+/** Collision-free canonical JSON used for exact retry comparison. */
+export function canonicalJson(value: unknown): string {
+  assertJsonValue(value);
+  const encode = (candidate: JsonValue): string => {
+    if (Array.isArray(candidate)) return `[${candidate.map(encode).join(',')}]`;
+    if (candidate !== null && typeof candidate === 'object') {
+      return `{${Object.keys(candidate).sort().map((key) => (
+        `${JSON.stringify(key)}:${encode(candidate[key]!)}`
+      )).join(',')}}`;
+    }
+    return JSON.stringify(candidate);
+  };
+  return encode(value);
 }
 
 function stableJson(value: unknown): string {
-  if (Array.isArray(value)) return `[${value.map(stableJson).join(',')}]`;
-  if (value && typeof value === 'object') {
-    const object = value as Record<string, unknown>;
-    return `{${Object.keys(object).sort().map((key) => `${JSON.stringify(key)}:${stableJson(object[key])}`).join(',')}}`;
-  }
-  return JSON.stringify(value);
+  return canonicalJson(value);
 }
 
 export function turnEnvelope<TObservation>(
@@ -332,6 +419,7 @@ export function turnEnvelope<TObservation>(
   turn: TObservation,
   extensions?: ProtocolExtensions,
 ): TurnEnvelope<TObservation> {
+  if (extensions !== undefined) assertJsonObject(extensions, 'extensions');
   return {
     protocol: PROTOCOL_ID,
     protocolVersion: PROTOCOL_VERSION,
@@ -350,6 +438,7 @@ export function pendingEnvelope<TObservation, TCommand>(
   acceptedParticipantId?: string,
   extensions?: ProtocolExtensions,
 ): PendingEnvelope<TObservation> {
+  if (extensions !== undefined) assertJsonObject(extensions, 'extensions');
   const submittedParticipants = window.participants.filter((id) => hasIntent(window, id));
   return {
     protocol: PROTOCOL_ID,

@@ -9,6 +9,7 @@
 import {
   PROTOCOL_ID,
   PROTOCOL_VERSION,
+  assertJsonObject,
   isParticipantId,
   type CommandSubmission,
   type PendingEnvelope,
@@ -21,9 +22,15 @@ export {
   PARTICIPANT_ID_PATTERN,
   PROTOCOL_ID,
   PROTOCOL_VERSION,
+  assertJsonObject,
+  assertJsonValue,
+  canonicalJson,
   isParticipantId,
   type CommandSubmission,
   type GameDefinition,
+  type JsonObject,
+  type JsonPrimitive,
+  type JsonValue,
   type PendingEnvelope,
   type TurnCursor,
   type TurnEnvelope,
@@ -213,6 +220,37 @@ export interface SessionBinding extends TurnCursor {
   controlRevision?: number;
 }
 
+/** Validate a persisted binding before restoring it into a client process. */
+export function parseSessionBinding(value: unknown): SessionBinding {
+  if (!value || typeof value !== 'object' || Array.isArray(value)) {
+    throw new ProtocolMismatchError('session binding must be an object');
+  }
+  const binding = value as Record<string, unknown>;
+  if (binding['protocol'] !== PROTOCOL_ID || binding['protocolVersion'] !== PROTOCOL_VERSION) {
+    throw new ProtocolMismatchError(`session binding must use ${PROTOCOL_ID} ${PROTOCOL_VERSION}`);
+  }
+  if (typeof binding['sessionId'] !== 'string' || !binding['sessionId'].trim()
+    || typeof binding['turnId'] !== 'string' || !binding['turnId'].trim()
+    || !Number.isSafeInteger(binding['revision']) || (binding['revision'] as number) < 0
+    || typeof binding['participantId'] !== 'string' || !isParticipantId(binding['participantId'])) {
+    throw new ProtocolMismatchError('session binding cursor or participant is invalid');
+  }
+  if (Object.hasOwn(binding, 'controlRevision')
+    && (!Number.isSafeInteger(binding['controlRevision']) || (binding['controlRevision'] as number) < 0)) {
+    throw new ProtocolMismatchError('session binding controlRevision is invalid');
+  }
+  return {
+    protocol: PROTOCOL_ID,
+    protocolVersion: PROTOCOL_VERSION,
+    sessionId: binding['sessionId'],
+    turnId: binding['turnId'],
+    revision: binding['revision'] as number,
+    participantId: binding['participantId'],
+    ...(binding['controlRevision'] === undefined
+      ? {} : { controlRevision: binding['controlRevision'] as number }),
+  };
+}
+
 export interface SessionStart {
   sessionId: string;
   turn: Turn;
@@ -339,6 +377,13 @@ export function parseTurnResult<TObservation = unknown>(data: unknown): TurnResu
   ) {
     throw new ProtocolMismatchError('response sessionId/turnId missing');
   }
+  if (Object.hasOwn(value, 'extensions')) {
+    try {
+      assertJsonObject(value['extensions'], 'response extensions');
+    } catch (error) {
+      throw new ProtocolMismatchError(error instanceof Error ? error.message : 'response extensions invalid');
+    }
+  }
   if (
     !Number.isSafeInteger(value['revision'])
     || (value['revision'] as number) < 0
@@ -438,8 +483,19 @@ export interface ArenaClientOptions {
   signal?: AbortSignal;
 }
 
+function awaitWithSignal<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
+  if (!signal) return promise;
+  if (signal.aborted) return Promise.reject(signal.reason);
+  return new Promise<T>((resolve, reject) => {
+    const onAbort = (): void => reject(signal.reason);
+    signal.addEventListener('abort', onAbort, { once: true });
+    promise.then(resolve, reject).finally(() => signal.removeEventListener('abort', onAbort));
+  });
+}
+
 export class ArenaClient {
   private readonly bindings = new Map<string, SessionBinding>();
+  private readonly observedArenaCursors = new Map<string, TurnCursor & { controlRevision?: number }>();
   private readonly request: typeof fetch;
 
   constructor(
@@ -472,7 +528,21 @@ export class ArenaClient {
       ...(controlRevision !== undefined ? { controlRevision } : {}),
     };
     this.bindings.set(result.sessionId, binding);
+    this.observedArenaCursors.delete(result.sessionId);
     return binding;
+  }
+
+  /** Return a JSON-safe snapshot for persistence across process restarts. */
+  getSessionBinding(sessionId: string): SessionBinding | undefined {
+    const binding = this.bindings.get(sessionId);
+    return binding ? { ...binding } : undefined;
+  }
+
+  /** Restore a previously persisted cursor/seat binding for exact retries. */
+  restoreSessionBinding(value: unknown): SessionBinding {
+    const binding = parseSessionBinding(value);
+    this.bindings.set(binding.sessionId, binding);
+    return { ...binding };
   }
 
   private parse<T>(data: unknown, expectedSessionId?: string): TurnResult<T> {
@@ -498,16 +568,19 @@ export class ArenaClient {
   }
 
   private async call<T>(method: string, path: string, body?: unknown): Promise<T> {
-    const key = typeof this.apiKey === 'function' ? await this.apiKey() : this.apiKey;
     const timeoutMs = this.options.timeoutMs ?? 30_000;
     const timeout = timeoutMs > 0
       ? AbortSignal.timeout(timeoutMs)
       : undefined;
     const signals = [this.options.signal, timeout].filter((signal): signal is AbortSignal => signal !== undefined);
+    const signal = signals.length > 1 ? AbortSignal.any(signals) : signals[0];
+    const key = typeof this.apiKey === 'function'
+      ? await awaitWithSignal(Promise.resolve().then(() => (this.apiKey as Exclude<ApiKeyProvider, string>)()), signal)
+      : this.apiKey;
     const res = await this.request(this.baseUrl + path, {
       method,
       body: body === undefined ? undefined : JSON.stringify(body),
-      signal: signals.length > 1 ? AbortSignal.any(signals) : signals[0],
+      signal,
       headers: {
         'content-type': 'application/json',
         ...(key ? { authorization: `Bearer ${key}` } : {}),
@@ -585,6 +658,11 @@ export class ArenaClient {
   ): Promise<TurnResult<TObservation>> {
     let binding = this.bindings.get(sessionId);
     if (!binding && !opts.cursor) {
+      if (opts.submissionId !== undefined) {
+        throw new ProtocolMismatchError(
+          'explicit submissionId requires the original cursor or a restored session binding',
+        );
+      }
       await this.getTurnEnvelope(sessionId);
       binding = this.bindings.get(sessionId);
     }
@@ -678,6 +756,18 @@ export class ArenaClient {
     // inventing the ordinary solo `player` seat when callers poll first;
     // submitArenaIntent will recover the real room binding on demand.
     if (binding) this.remember(result, binding.participantId);
+    else {
+      const observation = result.turn as TObservation & { controlRevision?: unknown };
+      const controlRevision = Number.isSafeInteger(observation?.controlRevision)
+        && (observation.controlRevision as number) >= 0
+        ? observation.controlRevision as number
+        : undefined;
+      this.observedArenaCursors.set(matchId, {
+        turnId: result.turnId,
+        revision: result.revision,
+        ...(controlRevision === undefined ? {} : { controlRevision }),
+      });
+    }
     return result;
   }
 
@@ -687,13 +777,24 @@ export class ArenaClient {
     opts: { submissionId?: string; cursor?: TurnCursor; controlRevision?: number } = {},
   ): Promise<TurnResult<TObservation>> {
     let binding = this.bindings.get(matchId);
+    const observedCursor = opts.submissionId !== undefined
+      ? this.observedArenaCursors.get(matchId)
+      : undefined;
+    const originalCursor = opts.cursor
+      ?? observedCursor;
     if (!binding) {
+      if (opts.submissionId !== undefined && !originalCursor) {
+        throw new ProtocolMismatchError(
+          'explicit submissionId requires the original cursor or a restored Arena session binding',
+        );
+      }
       await this.getArenaRoom<TObservation>(matchId);
       binding = this.bindings.get(matchId);
     }
-    const cursor = opts.cursor ?? binding;
+    const cursor = originalCursor ?? binding;
     if (!cursor) throw new ProtocolMismatchError('Arena session cursor unavailable');
-    const controlRevision = opts.controlRevision ?? binding?.controlRevision;
+    const controlRevision = opts.controlRevision ?? observedCursor?.controlRevision
+      ?? binding?.controlRevision;
     if (!Number.isSafeInteger(controlRevision) || controlRevision! < 0) {
       throw new ProtocolMismatchError('Arena controlRevision unavailable');
     }

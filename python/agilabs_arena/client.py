@@ -23,6 +23,7 @@ PROTOCOL_VERSION = "1.0"
 ARENA_CONTROL_EXTENSION = "agilabs.arena"
 PARTICIPANT_ID_PATTERN = r"^[A-Za-z0-9_.:@-]{1,128}$"
 _PARTICIPANT_ID_RE = re.compile(PARTICIPANT_ID_PATTERN)
+_MAX_SAFE_INTEGER = 9_007_199_254_740_991
 
 
 def _quote(value: str) -> str:
@@ -46,6 +47,66 @@ class IllegalActionRejected(ArenaAPIError):
 
 class ProtocolMismatchError(Exception):
     """Response is not a valid AgiLabs Turns v1 envelope."""
+
+
+def _validate_json(value: Any, label: str = "value", active: set[int] | None = None) -> None:
+    active = set() if active is None else active
+    if value is None or isinstance(value, (str, bool)):
+        return
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        if not math.isfinite(value):
+            raise ProtocolMismatchError(f"{label} must contain only finite numbers")
+        return
+    if not isinstance(value, (list, dict)):
+        raise ProtocolMismatchError(f"{label} must contain only plain JSON values")
+    identity = id(value)
+    if identity in active:
+        raise ProtocolMismatchError(f"{label} must not contain cycles")
+    active.add(identity)
+    try:
+        if isinstance(value, list):
+            for index, item in enumerate(value):
+                _validate_json(item, f"{label}[{index}]", active)
+        else:
+            for key, item in value.items():
+                if not isinstance(key, str):
+                    raise ProtocolMismatchError(f"{label} object keys must be strings")
+                _validate_json(item, f"{label}.{key}", active)
+    finally:
+        active.remove(identity)
+
+
+def parse_session_binding(value: Any) -> dict[str, Any]:
+    """Validate a JSON-safe persisted cursor/seat binding."""
+    if not isinstance(value, dict):
+        raise ProtocolMismatchError("session binding must be an object")
+    if value.get("protocol") != PROTOCOL_ID or value.get("protocolVersion") != PROTOCOL_VERSION:
+        raise ProtocolMismatchError(f"session binding must use {PROTOCOL_ID} {PROTOCOL_VERSION}")
+    revision = value.get("revision")
+    participant = value.get("participantId")
+    if (
+        not isinstance(value.get("sessionId"), str) or not value["sessionId"].strip()
+        or not isinstance(value.get("turnId"), str) or not value["turnId"].strip()
+        or not isinstance(revision, int) or isinstance(revision, bool)
+        or revision < 0 or revision > _MAX_SAFE_INTEGER
+        or not isinstance(participant, str) or _PARTICIPANT_ID_RE.fullmatch(participant) is None
+    ):
+        raise ProtocolMismatchError("session binding cursor or participant is invalid")
+    control_revision = value.get("controlRevision")
+    if "controlRevision" in value and (
+        not isinstance(control_revision, int) or isinstance(control_revision, bool)
+        or control_revision < 0 or control_revision > _MAX_SAFE_INTEGER
+    ):
+        raise ProtocolMismatchError("session binding controlRevision is invalid")
+    return {
+        "protocol": PROTOCOL_ID,
+        "protocolVersion": PROTOCOL_VERSION,
+        "sessionId": value["sessionId"],
+        "turnId": value["turnId"],
+        "revision": revision,
+        "participantId": participant,
+        **({"controlRevision": control_revision} if "controlRevision" in value else {}),
+    }
 
 
 def parse_turn_result(data: Any) -> dict[str, Any]:
@@ -93,6 +154,10 @@ def parse_turn_result(data: Any) -> dict[str, Any]:
             or accepted not in submitted
         ):
             raise ProtocolMismatchError("pending acceptedParticipantId must be submitted")
+    if "extensions" in data:
+        if not isinstance(data["extensions"], dict):
+            raise ProtocolMismatchError("response extensions must be a plain JSON object")
+        _validate_json(data["extensions"], "response extensions")
     return data
 
 
@@ -184,10 +249,13 @@ class ArenaClient:
         self.api_key = api_key
         self.timeout = timeout
         self._bindings: dict[str, dict[str, Any]] = {}
+        self._observed_arena_cursors: dict[str, dict[str, Any]] = {}
 
     def _remember(self, result: dict[str, Any], participant_id: str | None = None) -> None:
         previous = self._bindings.get(result["sessionId"], {})
         binding = {
+            "protocol": PROTOCOL_ID,
+            "protocolVersion": PROTOCOL_VERSION,
             "sessionId": result["sessionId"],
             "turnId": result["turnId"],
             "revision": result["revision"],
@@ -198,10 +266,22 @@ class ArenaClient:
         if (
             isinstance(control_revision, int)
             and not isinstance(control_revision, bool)
-            and 0 <= control_revision <= 9_007_199_254_740_991
+            and 0 <= control_revision <= _MAX_SAFE_INTEGER
         ):
             binding["controlRevision"] = control_revision
         self._bindings[result["sessionId"]] = binding
+        self._observed_arena_cursors.pop(result["sessionId"], None)
+
+    def get_session_binding(self, session_id: str) -> dict[str, Any] | None:
+        """Return a JSON-safe snapshot for persistence across process restarts."""
+        binding = self._bindings.get(session_id)
+        return dict(binding) if binding is not None else None
+
+    def restore_session_binding(self, value: Any) -> dict[str, Any]:
+        """Restore a persisted binding before issuing an exact retry."""
+        binding = parse_session_binding(value)
+        self._bindings[binding["sessionId"]] = binding
+        return dict(binding)
 
     def _call(self, method: str, path: str, body: dict | None = None) -> dict:
         headers = {"content-type": "application/json"}
@@ -283,6 +363,7 @@ class ArenaClient:
         command: Any,
         participant_id: str | None = None,
         submission_id: str | None = None,
+        cursor: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         return self._submit_intent_to(
             f"/v1/sessions/{_quote(session_id)}/actions",
@@ -290,6 +371,7 @@ class ArenaClient:
             command,
             participant_id,
             submission_id,
+            cursor=cursor,
         )
 
     def _submit_intent_to(
@@ -300,23 +382,40 @@ class ArenaClient:
         participant_id: str | None = None,
         submission_id: str | None = None,
         control_revision: int | None = None,
+        cursor: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
         binding = self._bindings.get(session_id)
-        if binding is None:
+        if binding is None and cursor is None:
+            if submission_id is not None:
+                raise ProtocolMismatchError(
+                    "explicit submission_id requires the original cursor or a restored session binding"
+                )
             self.get_turn_envelope(session_id)
             binding = self._bindings[session_id]
-        participant = participant_id or binding["participantId"]
+        selected = cursor or binding
+        if not isinstance(selected, dict):
+            raise ProtocolMismatchError("session cursor unavailable")
+        turn_id = selected.get("turnId")
+        revision = selected.get("revision")
+        if (
+            not isinstance(turn_id, str) or not turn_id.strip()
+            or not isinstance(revision, int) or isinstance(revision, bool)
+            or revision < 0 or revision > _MAX_SAFE_INTEGER
+        ):
+            raise ProtocolMismatchError("session cursor is invalid")
+        participant = participant_id or (binding or {}).get("participantId", "player")
+        _validate_json(command, "command")
         body = {
             "protocol": PROTOCOL_ID,
             "protocolVersion": PROTOCOL_VERSION,
             "sessionId": session_id,
-            "turnId": binding["turnId"],
-            "revision": binding["revision"],
+            "turnId": turn_id,
+            "revision": revision,
             "participantId": participant,
             "command": command,
         }
         # Stable across an application retry after an ambiguous network error.
-        body["submissionId"] = submission_id or f"{participant}:{binding['turnId']}"
+        body["submissionId"] = submission_id or f"{participant}:{turn_id}"
         if control_revision is not None:
             body["extensions"] = {
                 ARENA_CONTROL_EXTENSION: {"controlRevision": control_revision}
@@ -407,6 +506,18 @@ class ArenaClient:
         # submit_arena_intent will recover the real room binding on demand.
         if binding is not None:
             self._remember(result, binding["participantId"])
+        else:
+            turn = result.get("turn")
+            control_revision = turn.get("controlRevision") if isinstance(turn, dict) else None
+            self._observed_arena_cursors[match_id] = {
+                "turnId": result["turnId"],
+                "revision": result["revision"],
+                **(
+                    {"controlRevision": control_revision}
+                    if isinstance(control_revision, int) and not isinstance(control_revision, bool)
+                    and 0 <= control_revision <= _MAX_SAFE_INTEGER else {}
+                ),
+            }
         return result
 
     def submit_arena_intent(
@@ -417,19 +528,29 @@ class ArenaClient:
         control_revision: int | None = None,
     ) -> dict[str, Any]:
         binding = self._bindings.get(match_id)
+        original_cursor = (
+            self._observed_arena_cursors.get(match_id)
+            if submission_id is not None else None
+        )
         if binding is None:
+            if submission_id is not None and original_cursor is None:
+                raise ProtocolMismatchError(
+                    "explicit submission_id requires the original cursor or a restored Arena session binding"
+                )
             self.get_arena_room(match_id)
             binding = self._bindings[match_id]
         expected_control_revision = (
             control_revision
             if control_revision is not None
-            else binding.get("controlRevision")
+            else (original_cursor or {}).get(
+                "controlRevision", binding.get("controlRevision")
+            )
         )
         if (
             not isinstance(expected_control_revision, int)
             or isinstance(expected_control_revision, bool)
             or expected_control_revision < 0
-            or expected_control_revision > 9_007_199_254_740_991
+            or expected_control_revision > _MAX_SAFE_INTEGER
         ):
             raise ProtocolMismatchError("Arena controlRevision unavailable")
         participant = binding["participantId"]
@@ -441,6 +562,7 @@ class ArenaClient:
             submission_id
             or f"{participant}:{binding['turnId']}:control:{expected_control_revision}",
             expected_control_revision,
+            cursor=original_cursor,
         )
 
     def submit_action(

@@ -105,6 +105,51 @@ describe('generic transcript rechecking', () => {
     ])).toMatchObject({ ok: true, problems: [] });
   });
 
+  it('accepts contiguous zero-based production numbering', () => {
+    expect(recheckGridTranscript(reducer, header, [
+      { n: 0, wireId: 'Action 1', canonicalId: 'Action 1' },
+      { n: 1, wireId: 'Action 2', canonicalId: 'Action 2', index: 2 },
+    ])).toMatchObject({ ok: true, problems: [] });
+  });
+
+  it('rejects malformed replay metadata without throwing', () => {
+    const result = recheckGridTranscript(reducer, { ...header, perm: [0, 0] }, [
+      { n: 99, wireId: 'Action 0', canonicalId: 'Action 1', x: Number.NaN },
+      { n: 3, wireId: 'Action 2', canonicalId: 'Action 3', index: 2 },
+    ]);
+    expect(result.ok).toBe(false);
+    expect(result.problems.join('\n')).toMatch(/bijection/);
+    expect(result.problems.join('\n')).toMatch(/start at 0 or 1/);
+    expect(result.problems.join('\n')).toMatch(/safe integer/);
+    expect(result.problems.join('\n')).toMatch(/within Action/);
+  });
+
+  it('reports a runtime non-array permutation instead of throwing', () => {
+    const malformed = {
+      ...header,
+      perm: null,
+    } as unknown as typeof header;
+    expect(() => recheckGridTranscript(reducer, malformed, [
+      { n: 0, wireId: 'Action 1', canonicalId: 'Action 1' },
+    ])).not.toThrow();
+    expect(recheckGridTranscript(reducer, malformed, [
+      { n: 0, wireId: 'Action 1', canonicalId: 'Action 1' },
+    ])).toMatchObject({ ok: false });
+    expect(recheckGridTranscript(reducer, malformed, []).problems.join('\n')).toMatch(/bijection/);
+  });
+
+  it('rejects gaps and actions after terminal state', () => {
+    const gap = recheckGridTranscript(reducer, { ...header, actionsUsed: 3 }, [
+      { n: 0, wireId: 'Action 1', canonicalId: 'Action 1' },
+      { n: 2, wireId: 'Action 1', canonicalId: 'Action 1' },
+      { n: 3, wireId: 'Action 1', canonicalId: 'Action 1' },
+      { n: 4, wireId: 'Action 1', canonicalId: 'Action 1' },
+    ]);
+    expect(gap.ok).toBe(false);
+    expect(gap.problems.join('\n')).toMatch(/non-contiguous/);
+    expect(gap.problems.join('\n')).toMatch(/after terminal/);
+  });
+
   it('detects permutation and outcome discrepancies', () => {
     const result = recheckGridTranscript(reducer, { ...header, actionsUsed: 9 }, [
       { n: 1, wireId: 'Action 2', canonicalId: 'Action 1' },

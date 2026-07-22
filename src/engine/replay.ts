@@ -33,19 +33,67 @@ export function recheckGridTranscript<TLevel, TState, TView extends GridTurnView
   actions: GridTranscriptAction[],
 ): GridRecheckResult {
   const problems: string[] = [];
-  for (const action of actions) {
-    const wire = Number(/^Action (\d+)$/.exec(action.wireId)?.[1] ?? Number.NaN) - 1;
-    const canonical = Number(/^Action (\d+)$/.exec(action.canonicalId)?.[1] ?? Number.NaN) - 1;
-    if (header.perm[wire] !== canonical) {
+  const validSeed = Number.isSafeInteger(header.seed) && header.seed >= 0 && header.seed <= 0xffff_ffff;
+  if (!validSeed) problems.push('seed must be an unsigned 32-bit integer');
+  const permutation: unknown[] = Array.isArray(header.perm) ? header.perm : [];
+  const permutationLength = permutation.length;
+  const validPermutation = Array.isArray(header.perm)
+    && permutation.every((entry) => Number.isSafeInteger(entry)
+      && (entry as number) >= 0 && (entry as number) < permutationLength)
+    && new Set(permutation).size === permutationLength;
+  if (!validPermutation) problems.push('perm must be a complete bijection over its declared length');
+
+  const sequenceBase = actions.length > 0 && (actions[0]?.n === 0 || actions[0]?.n === 1)
+    ? actions[0].n
+    : undefined;
+  if (actions.length > 0 && sequenceBase === undefined) {
+    problems.push('action numbering must start at 0 or 1');
+  }
+  const parsedActions = actions.map((action, offset) => {
+    if (!Number.isSafeInteger(action.n) || sequenceBase === undefined || action.n !== sequenceBase + offset) {
+      problems.push(`action at index ${offset} has non-contiguous sequence number ${String(action.n)}`);
+    }
+    const parseId = (value: unknown, field: string): number | undefined => {
+      if (typeof value !== 'string') {
+        problems.push(`action ${String(action.n)} ${field} must use Action N syntax`);
+        return undefined;
+      }
+      const match = /^Action ([1-9]\d*)$/.exec(value);
+      const number = match ? Number(match[1]) : Number.NaN;
+      if (!Number.isSafeInteger(number) || number < 1 || number > permutationLength) {
+        problems.push(`action ${String(action.n)} ${field} must be within Action 1..${permutationLength}`);
+        return undefined;
+      }
+      return number - 1;
+    };
+    for (const field of ['x', 'y', 'index'] as const) {
+      if (action[field] !== undefined && !Number.isSafeInteger(action[field])) {
+        problems.push(`action ${String(action.n)} ${field} must be a safe integer`);
+      }
+    }
+    const wire = parseId(action.wireId, 'wireId');
+    const canonical = parseId(action.canonicalId, 'canonicalId');
+    if (validPermutation && wire !== undefined && canonical !== undefined
+      && permutation[wire] !== canonical) {
       problems.push(
         `action ${action.n}: wire ${action.wireId} → ${action.canonicalId} contradicts the session permutation`,
       );
     }
-  }
+    return { action, valid: wire !== undefined && canonical !== undefined
+      && ['x', 'y', 'index'].every((field) => (
+        action[field as 'x' | 'y' | 'index'] === undefined
+        || Number.isSafeInteger(action[field as 'x' | 'y' | 'index'])
+      )) };
+  });
 
-  let state = reducer.init(header.level, header.seed);
+  let state = reducer.init(header.level, validSeed ? header.seed : 0);
   let replayError: string | null = null;
-  for (const action of actions) {
+  for (const { action, valid } of parsedActions) {
+    if (reducer.view(state).status !== 'playing') {
+      problems.push(`action ${action.n} appears after terminal state`);
+      break;
+    }
+    if (!valid) continue;
     const submitted: GridSubmittedAction = {
       id: action.canonicalId,
       ...(action.x !== undefined ? { x: action.x } : {}),

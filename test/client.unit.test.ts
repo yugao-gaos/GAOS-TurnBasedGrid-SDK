@@ -70,6 +70,9 @@ describe('ArenaClient v1 protocol adapter', () => {
       ...turnEnvelope('s1', 0, TURN),
       revision: -1,
     })).toThrow(ProtocolMismatchError);
+    expect(() => parseTurnResult({
+      ...turnEnvelope('s1', 0, TURN), extensions: 7,
+    })).toThrow('extensions');
   });
 
   it('rejects incoherent pending participant state without constraining opaque turn ids', () => {
@@ -427,5 +430,45 @@ describe('ArenaClient v1 protocol adapter', () => {
       submissionId: 'north:m1:0:control:1',
       extensions: { 'agilabs.arena': { controlRevision: 1 } },
     });
+  });
+
+  it('persists and restores the original binding for an exact retry', async () => {
+    const calls: RequestInit[] = [];
+    const request = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      calls.push(init!);
+      return new Response(JSON.stringify(turnEnvelope('s1', 1, { ...TURN, turnNumber: 1 })));
+    });
+    const client = new ArenaClient('https://example.test', undefined, { fetch: request });
+    const restored = client.restoreSessionBinding({
+      protocol: 'agilabs.turns', protocolVersion: '1.0',
+      sessionId: 's1', turnId: 's1:0', revision: 0, participantId: 'player',
+    });
+    expect(client.getSessionBinding('s1')).toEqual(restored);
+    await client.submitIntent('s1', { id: 'Action 1' }, { submissionId: 'retry-revision-0' });
+    expect(JSON.parse(String(calls[0]!.body))).toMatchObject({
+      turnId: 's1:0', revision: 0, submissionId: 'retry-revision-0',
+    });
+    expect(() => client.restoreSessionBinding({ ...restored, revision: -1 })).toThrow('binding');
+  });
+
+  it('does not fetch a newer cursor for an ambiguous explicit retry key', async () => {
+    const request = vi.fn(async () => new Response(JSON.stringify(turnEnvelope('s1', 1, TURN))));
+    const client = new ArenaClient('https://example.test', undefined, { fetch: request });
+    await expect(client.submitIntent('s1', { id: 'Action 1' }, {
+      submissionId: 'retry-revision-0',
+    })).rejects.toThrow('original cursor');
+    expect(request).not.toHaveBeenCalled();
+  });
+
+  it('lets shared cancellation interrupt asynchronous authentication', async () => {
+    const controller = new AbortController();
+    const request = vi.fn(async () => new Response('{}'));
+    const client = new ArenaClient('https://example.test', () => new Promise(() => {}), {
+      fetch: request, signal: controller.signal,
+    });
+    const pending = client.arenaCatalog();
+    controller.abort(new Error('auth canceled'));
+    await expect(pending).rejects.toThrow('auth canceled');
+    expect(request).not.toHaveBeenCalled();
   });
 });

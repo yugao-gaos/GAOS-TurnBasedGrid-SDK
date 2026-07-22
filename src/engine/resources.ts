@@ -77,6 +77,20 @@ function assertFinite(value: number, label: string): void {
   if (!Number.isFinite(value)) throw new TypeError(`${label} must be finite`);
 }
 
+function assertId(value: string, label: string): void {
+  if (typeof value !== 'string' || !value.trim()) throw new TypeError(`${label} must not be empty`);
+}
+
+function setOwn<T>(target: Record<string, T>, key: string, value: T): void {
+  Object.defineProperty(target, key, { value, writable: true, enumerable: true, configurable: true });
+}
+
+function copyOwn<T>(source: Readonly<Record<string, T>>): Record<string, T> {
+  const target: Record<string, T> = {};
+  for (const key of Object.keys(source)) setOwn(target, key, source[key]!);
+  return target;
+}
+
 function assertRequirementAmount(amount: number): void {
   assertFinite(amount, 'resource minimum amount');
   if (amount < 0) throw new RangeError('resource minimum amount must not be negative');
@@ -91,7 +105,7 @@ export function defineResources<const T extends Record<string, ResourceDefinitio
   definitions: T,
 ): Readonly<T> {
   for (const [id, definition] of Object.entries(definitions)) {
-    if (!id) throw new TypeError('resource ids must not be empty');
+    assertId(id, 'resource id');
     assertFinite(definition.initial, `resource ${id} initial`);
     if (definition.min !== undefined) assertFinite(definition.min, `resource ${id} min`);
     if (definition.max !== undefined) assertFinite(definition.max, `resource ${id} max`);
@@ -115,17 +129,17 @@ export function initializeResourceBalances(
   definitions: ResourceDefinitions,
   saved: ResourceBalances = {},
 ): ResourceBalances {
-  const balances: Record<string, number> = { ...saved };
+  const balances = copyOwn(saved);
   for (const [id, balance] of Object.entries(balances)) {
     assertFinite(balance, `saved resource ${id} balance`);
-    const definition = definitions[id];
+    const definition = Object.hasOwn(definitions, id) ? definitions[id] : undefined;
     if (definition && ((definition.min !== undefined && balance < definition.min)
       || (definition.max !== undefined && balance > definition.max))) {
       throw new RangeError(`saved resource ${id} balance must be within bounds`);
     }
   }
   for (const [id, definition] of Object.entries(definitions)) {
-    if (!(id in balances)) balances[id] = definition.initial;
+    if (!Object.hasOwn(balances, id)) setOwn(balances, id, definition.initial);
   }
   return balances;
 }
@@ -134,11 +148,13 @@ export function resourceAtLeast(
   resourceId: string,
   amount: number,
 ): ResourceMinimumRequirement {
+  assertId(resourceId, 'resource id');
   assertRequirementAmount(amount);
   return { type: 'resource.minimum', resourceId, amount };
 }
 
 export function changeResource(resourceId: string, delta: number): ResourceDeltaEffect {
+  assertId(resourceId, 'resource id');
   assertResourceDelta(delta);
   return { type: 'resource.delta', resourceId, delta };
 }
@@ -153,10 +169,16 @@ export function planResourceTransaction(
   transaction: ResourceTransaction,
 ): ResourceTransactionPlan {
   const original = balances;
+  assertId(transaction.id, 'resource transaction id');
+  for (const [id, balance] of Object.entries(balances)) {
+    assertId(id, 'resource id');
+    assertFinite(balance, `resource ${id} balance`);
+  }
 
   for (const [index, requirement] of (transaction.requirements ?? []).entries()) {
+    assertId(requirement.resourceId, 'resource id');
     assertRequirementAmount(requirement.amount);
-    if (!(requirement.resourceId in definitions)) {
+    if (!Object.hasOwn(definitions, requirement.resourceId)) {
       return {
         ok: false,
         balances: original,
@@ -169,7 +191,9 @@ export function planResourceTransaction(
         },
       };
     }
-    const available = balances[requirement.resourceId] ?? definitions[requirement.resourceId]!.initial;
+    const available = Object.hasOwn(balances, requirement.resourceId)
+      ? balances[requirement.resourceId]!
+      : definitions[requirement.resourceId]!.initial;
     if (available < requirement.amount) {
       return {
         ok: false,
@@ -186,11 +210,14 @@ export function planResourceTransaction(
     }
   }
 
-  const next: Record<string, number> = { ...balances };
+  const next = copyOwn(balances);
   const changes: ResourceChange[] = [];
   for (const [index, effect] of transaction.effects.entries()) {
+    assertId(effect.resourceId, 'resource id');
     assertResourceDelta(effect.delta);
-    const definition = definitions[effect.resourceId];
+    const definition = Object.hasOwn(definitions, effect.resourceId)
+      ? definitions[effect.resourceId]
+      : undefined;
     if (!definition) {
       return {
         ok: false,
@@ -204,7 +231,7 @@ export function planResourceTransaction(
         },
       };
     }
-    const previous = next[effect.resourceId] ?? definition.initial;
+    const previous = Object.hasOwn(next, effect.resourceId) ? next[effect.resourceId]! : definition.initial;
     const current = previous + effect.delta;
     if ((definition.min !== undefined && current < definition.min)
       || (definition.max !== undefined && current > definition.max)) {
@@ -222,7 +249,7 @@ export function planResourceTransaction(
         },
       };
     }
-    next[effect.resourceId] = current;
+    setOwn(next, effect.resourceId, current);
     changes.push({
       type: 'resource.changed',
       transactionId: transaction.id,
@@ -243,6 +270,6 @@ export function commitResourceTransaction(
   plan: ResourceTransactionPlan,
 ): boolean {
   if (!plan.ok) return false;
-  for (const change of plan.changes) balances[change.resourceId] = change.current;
+  for (const change of plan.changes) setOwn(balances, change.resourceId, change.current);
   return true;
 }

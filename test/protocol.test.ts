@@ -84,6 +84,40 @@ describe('v1 simultaneous intent collection', () => {
     );
   });
 
+  it('accepts reordered plain JSON but rejects lossy or recursive commands', () => {
+    const initial = createIntentWindow('s1', 0, ['alpha', 'bravo']);
+    const first = collectIntent(initial, submit('alpha', { z: 1, nested: { b: 2, a: 3 } }));
+    expect(collectIntent(first.window, submit('alpha', { nested: { a: 3, b: 2 }, z: 1 })))
+      .toMatchObject({ status: 'pending' });
+    expect(() => collectIntent(initial, submit('alpha', Number.NaN))).toThrowError(
+      expect.objectContaining<Partial<IntentCollectionError>>({ code: 'invalid_submission' }),
+    );
+    expect(() => collectIntent(initial, submit('alpha', BigInt(1)))).toThrowError(
+      expect.objectContaining<Partial<IntentCollectionError>>({ code: 'invalid_submission' }),
+    );
+    expect(() => collectIntent(initial, submit('alpha', { missing: undefined }))).toThrowError(
+      expect.objectContaining<Partial<IntentCollectionError>>({ code: 'invalid_submission' }),
+    );
+    expect(() => collectIntent(initial, submit('alpha', () => 1))).toThrowError(
+      expect.objectContaining<Partial<IntentCollectionError>>({ code: 'invalid_submission' }),
+    );
+    expect(() => collectIntent(initial, submit('alpha', Symbol('bad')))).toThrowError(
+      expect.objectContaining<Partial<IntentCollectionError>>({ code: 'invalid_submission' }),
+    );
+    expect(() => collectIntent(initial, submit('alpha', new Date()))).toThrowError(
+      expect.objectContaining<Partial<IntentCollectionError>>({ code: 'invalid_submission' }),
+    );
+    const sparse = Array(1);
+    expect(() => collectIntent(initial, submit('alpha', sparse))).toThrowError(
+      expect.objectContaining<Partial<IntentCollectionError>>({ code: 'invalid_submission' }),
+    );
+    const cyclic: Record<string, unknown> = {};
+    cyclic.self = cyclic;
+    expect(() => collectIntent(initial, submit('alpha', cyclic))).toThrowError(
+      expect.objectContaining<Partial<IntentCollectionError>>({ code: 'invalid_submission' }),
+    );
+  });
+
   it('treats hostile object-property participant ids as ordinary seats', () => {
     const initial = createIntentWindow('s1', 0, ['constructor', '__proto__']);
     const first = collectIntent(initial, submit('constructor', { move: 1 }));
