@@ -46,17 +46,19 @@ export default defineConfig({
   themeConfig: {
     siteTitle: 'GAOS Turn-Based Grid Toolkit',
     nav: [
+      { text: 'Mission', link: '/mission' },
       { text: 'Guide', link: '/quickstart' },
-      { text: 'Mechanisms', link: '/engine' },
+      { text: 'Mechanisms', link: '/mechanisms/' },
       { text: 'Agentic play', link: '/agentic-play' },
       { text: 'Protocol', link: '/protocol-v1' },
       { text: 'Python', link: '/python' },
-      { text: 'v0.9.0', link: '/releases' },
+      { text: 'v0.9.1', link: '/releases' },
     ],
     sidebar: [
       {
         text: 'Start here',
         items: [
+          { text: 'Mission and benchmark thesis', link: '/mission' },
           { text: 'Quickstart', link: '/quickstart' },
           { text: 'Architecture map', link: '/architecture' },
         ],
@@ -64,8 +66,38 @@ export default defineConfig({
       {
         text: 'Engine',
         items: [
-          { text: 'Reusable mechanisms', link: '/engine' },
+          { text: 'Engine boundary', link: '/engine' },
+          { text: 'Mechanism overview', link: '/mechanisms/' },
+          { text: 'Grid model', link: '/mechanisms/grid-model' },
+          { text: 'Simultaneous movement', link: '/mechanisms/movement' },
+          { text: 'Geometry and FOV', link: '/mechanisms/geometry' },
           { text: 'Turn settlement', link: '/settlement' },
+        ],
+      },
+      {
+        text: 'Interaction mechanisms',
+        collapsed: true,
+        items: [
+          { text: 'Chain reactions', link: '/mechanisms/chain-reactions' },
+          { text: 'Projectiles and flight', link: '/mechanisms/projectiles' },
+          { text: 'Push chains', link: '/mechanisms/push-chains' },
+          { text: 'Arrival rules', link: '/mechanisms/arrivals' },
+          { text: 'Resource claims', link: '/mechanisms/resource-claims' },
+          { text: 'Gates', link: '/mechanisms/gates' },
+          { text: 'Latched triggers', link: '/mechanisms/triggers' },
+          { text: 'Grid rays', link: '/mechanisms/rays' },
+          { text: 'Behavior trees', link: '/mechanisms/behavior-trees' },
+        ],
+      },
+      {
+        text: 'Systems and verification',
+        collapsed: true,
+        items: [
+          { text: 'Transport and interlocks', link: '/mechanisms/transport' },
+          { text: 'Deterministic randomness', link: '/mechanisms/randomness' },
+          { text: 'Scoring and budgets', link: '/mechanisms/scoring' },
+          { text: 'Solver', link: '/mechanisms/solver' },
+          { text: 'Replay verification', link: '/mechanisms/replay' },
         ],
       },
       {

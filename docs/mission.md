@@ -1,0 +1,213 @@
+# Mission: games as shared benchmarks
+
+## Our mission
+
+**GAOS exists to make interactive games a shared, inspectable proving ground
+for human and machine intelligence—where both act through the same rules, face
+the same consequences, and can be compared through reproducible play rather
+than persuasive outputs alone.**
+
+We want developers to be able to build games that are enjoyable for people,
+playable by agents without UI automation, and rigorous enough to reveal how a
+system plans, adapts, cooperates, competes, and recovers from mistakes.
+
+That requires more than exposing a model API. The environment must provide
+clear observations and legal actions, deterministic resolution, versioned
+rules, measurable outcomes, and replayable evidence. GAOS supplies those
+reusable foundations while each game retains its own world, content, and
+meaning.
+
+## What we mean by a benchmark
+
+A useful game benchmark is not one level, one model score, or one leaderboard.
+It is a versioned evaluation system:
+
+```text
+environment + task suite + action protocol + metrics + replay evidence
+```
+
+The environment defines what can happen. The task suite samples different
+skills and situations. The protocol gives every participant the same legal
+interface. Metrics summarize outcomes, while transcripts preserve the evidence
+needed to understand how those outcomes were produced.
+
+Scores are useful, but they are not sufficient. A strong benchmark also makes
+failure legible: Did the agent misunderstand the board, choose an illegal
+action, predict another actor incorrectly, waste resources, fail to adapt, or
+find a valid but inefficient plan?
+
+## Why games are a good approach
+
+### They measure behavior over time
+
+A static question measures one response. A game measures a sequence of choices
+under changing state. Early decisions constrain later options, mistakes carry
+consequences, and success depends on maintaining a coherent strategy rather
+than producing one plausible answer.
+
+### They combine capabilities naturally
+
+One compact scenario can require spatial reasoning, planning, memory, resource
+management, tool use, communication, uncertainty, cooperation, and adaptation.
+These abilities interact inside one causal environment instead of being scored
+as unrelated test questions.
+
+### Humans and agents can share the same task
+
+When both use the same rules and action space, human play provides an
+interpretable reference rather than a separate benchmark. We can compare not
+only final score, but efficiency, consistency, recovery, strategy diversity,
+and the kinds of errors each participant makes.
+
+The interface may differ—a person can use a rendered client while an agent uses
+structured observations—but both must reach the same authoritative reducer and
+produce the same canonical actions.
+
+### Games are repeatable without being static
+
+Seeds, authored variations, hidden information, different opponents, and new
+levels can create many controlled situations from one ruleset. This supports
+repeat trials and held-out evaluation without reducing the benchmark to a
+fixed answer sheet.
+
+### They produce inspectable evidence
+
+Every turn can be recorded as an observation, legal-action set, chosen action,
+state transition, event trace, and outcome. Deterministic replay lets a judge
+or developer reproduce a run, audit a surprising result, and compare agents
+under identical conditions.
+
+### They can remain worth playing
+
+A benchmark that is also a game has a continuing source of difficult,
+human-legible tasks. Designers can create new mechanics and scenarios; players
+can expose strategies and edge cases; agents can be evaluated on the same
+evolving challenges. Enjoyment does not guarantee scientific validity, but it
+helps the environment stay alive rather than becoming a solved worksheet.
+
+## Why use a grid
+
+Grids make spatial state discrete, compact, and inspectable. Cells provide
+stable identities for movement, distance, collision, line of sight, resource
+claims, and causal traces. A structured grid observation is also independent
+of rendering quality, screen resolution, input timing, and computer-vision
+noise.
+
+That does not make grid worlds trivial. Partial observability, simultaneous
+actors, dynamic terrain, multi-cell entities, linked systems, projectiles, and
+long settlement chains can create deep planning problems while preserving an
+exact authoritative state.
+
+The renderer can still be expressive for people. The benchmark core remains a
+deterministic state machine that a server, solver, replay checker, and agent can
+all execute without reproducing the visuals.
+
+## Why simultaneous turn-based play
+
+Sequential turn-taking gives the later actor information about the earlier
+actor's committed move. Real-time play often measures reaction speed, network
+latency, hardware, and input throughput alongside reasoning. Simultaneous
+turn-based play occupies a useful middle ground: everyone chooses from the same
+snapshot, then the world resolves those intentions together.
+
+```text
+shared observation
+       ↓
+participants choose independently
+       ↓
+intents close for the turn
+       ↓
+deterministic simultaneous resolution
+       ↓
+same-turn consequences settle
+       ↓
+next shared observation
+```
+
+### It tests prediction, not response order
+
+An actor cannot simply wait to see the opponent's committed move. It must model
+what others may do, reason about collisions or cooperation, and choose an action
+that remains sensible across plausible outcomes.
+
+### It removes speed as an accidental advantage
+
+Humans and models may need very different amounts of deliberation. A bounded
+turn window lets each participant think before submitting, while the result is
+independent of who sent an HTTP request a few milliseconds earlier.
+
+### It makes concurrency fair and explicit
+
+All intents qualify against one turn snapshot. Contested destinations,
+resources, swaps, and interactions are resolved by documented rules rather than
+server arrival order. No participant gains initiative accidentally from process
+scheduling or network geography.
+
+### It creates richer multi-agent reasoning
+
+Simultaneous choices expose coordination, trust, signaling, competition,
+conflict avoidance, and opponent modeling. Even deterministic movement can
+produce meaningful uncertainty because another participant's intent is unknown
+when the choice is made.
+
+### It remains reproducible
+
+Turn inputs are finite and canonical. The engine can resolve movement and then
+settle every induced collision, switch, pickup, gate, projectile, or transport
+effect through deterministic waves before publishing the next observation. The
+complete turn can be traced and replayed without reproducing wall-clock timing.
+
+## Comparison
+
+| Property | Real-time | Sequential turns | Simultaneous turns |
+|---|---|---|---|
+| Reaction speed affects results | Often | Rarely | No, within the turn limit |
+| Later actor sees earlier action | Continuously | Yes | No |
+| Request order can create advantage | Often | Defined by turn order | No |
+| Opponent prediction is required | Mixed | Reduced for later actor | Central |
+| Exact replay is straightforward | Difficult | Yes | Yes |
+| Slow model participation | Awkward | Natural | Natural |
+| Concurrent conflict is explicit | Timing-dependent | Mostly absent | Core mechanic |
+
+Simultaneous turns are not universally better. Real-time games are appropriate
+when motor control and rapid adaptation are the capability being tested;
+sequential turns are appropriate when initiative order is part of the design.
+GAOS focuses on simultaneous turn-based systems because they isolate strategic
+decision quality while retaining meaningful multi-agent interaction.
+
+## Principles for credible evaluation
+
+GAOS encourages benchmark authors to:
+
+1. **Use one authoritative reducer.** Human clients, model agents, solvers, and
+   replay checks must not implement approximations of the rules.
+2. **Expose concrete legal actions.** Do not score agents mainly on guessing an
+   undocumented command syntax.
+3. **Version rules and content.** A score is meaningful only with the exact
+   environment version that produced it.
+4. **Separate outcome from evidence.** Keep scores for comparison and complete
+   transcripts for diagnosis.
+5. **Evaluate across tasks and seeds.** One level or lucky run is not a robust
+   measure.
+6. **Keep held-out challenges.** Public examples teach the interface; unseen
+   variations test transfer rather than memorization.
+7. **Report efficiency and failure modes.** Wins alone hide waste, brittleness,
+   invalid actions, and inconsistent planning.
+8. **Compare under equal conditions.** Use the same rules, observations,
+   action budget, seeds, and settlement policy for every candidate.
+
+## What GAOS does not claim
+
+Performance in a game is evidence about performance in that environment. It is
+not, by itself, proof of general intelligence, real-world safety, or competence
+in unrelated domains. Any benchmark can reward narrow optimization, contain
+design bias, or become saturated.
+
+The goal is therefore not to produce one universal intelligence number. The
+goal is to make interactive evaluation easier to build, reproduce, inspect,
+extend, and compare—so claims about agent capability rest on observable
+behavior and replayable evidence.
+
+Continue with the [architecture map](/architecture), the
+[mechanism reference](/mechanisms/), or [agentic play](/agentic-play).
+

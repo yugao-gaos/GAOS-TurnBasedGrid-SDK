@@ -2,15 +2,13 @@
 
 GAOS stands for **Gaming AGI Open SDK**.
 
-**Games as benchmarks for human and AI agents.**
+**An open-source, community-driven SDK for building game-as-benchmark arenas
+where humans and AI agents compete on equal terms and are evaluated by the same
+standards to help advance AGI.**
 
-**Deterministic grid mechanics and multiplayer infrastructure for agent-ready
-games.**
-
-This AI-native toolkit provides
-TypeScript and Python clients for games hosted through the GAOS turn protocol,
-plus a reusable TypeScript engine and provider-neutral agent runtime. The
-repository contains six layers:
+GAOS provides TypeScript and Python clients for games hosted through its turn
+protocol, plus a reusable TypeScript engine and provider-neutral agent runtime.
+The repository contains six layers:
 
 - a genre-neutral v1 turn envelope, cursor, retry, and simultaneous-intent
   protocol;
@@ -30,14 +28,117 @@ platform repository.
 **[Read the documentation](https://yugao-gaos.github.io/GAOS-TurnBasedGrid-SDK/)**
 or begin with the [quickstart](https://yugao-gaos.github.io/GAOS-TurnBasedGrid-SDK/quickstart).
 
-**Built with GAOS:** [Zonoid](https://zonoid.ai) is the first game built with
-the GAOS Turn-Based Grid Toolkit—a strategy game for humans and AI agents,
-built around prediction, planning, and judgment. Its product content remains
-separate from the SDK.
+**Built with GAOS:** [Zonoid](https://zonoid.ai) is the toolkit's first
+production game and live reference.
 
-[Read how we built GAOS and Zonoid with GPT-5.6 Sol](docs/building-with-gpt-5-6-sol.md),
-from concepting and specialist asset production through engineering,
-publishing, and model-play testing.
+## Built during OpenAI Build Week
+
+The **GAOS SDK is the submitted project**. This standalone repository was
+created on July 21, 2026 during OpenAI Build Week, and its complete commit and
+release history was produced during the event. The work turned the reusable
+grid engine, deterministic agent evaluation environment, provider-neutral
+drivers, and CLI integrations into an independently installable open-source
+toolkit with TypeScript and Python releases.
+
+The pre-existing Zonoid platform is outside the submission scope, but was
+central to production. As the game evolved, GAOS generalized, implemented, and
+tested the reusable capabilities needed to meet its new requirements; Zonoid
+then validated them in a live product. Judges can register at
+[zonoid.ai](https://zonoid.ai) and download the game without rebuilding its
+platform source. The [GPT-5.6 Sol case study](docs/building-with-gpt-5-6-sol.md)
+records Codex's role in extraction, design, implementation, review, publishing,
+and agent-play testing.
+
+## Devpost judge guide
+
+GAOS is submitted in the **Developer Tools** category. The copy-ready project
+description, URLs, installation details, test instructions, and `/feedback`
+Session ID are collected in [DEVPOST.md](DEVPOST.md).
+
+### Public links
+
+- **Source:** https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK
+- **Documentation:** https://yugao-gaos.github.io/GAOS-TurnBasedGrid-SDK/
+- **Release:** https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK/releases/tag/v0.9.2
+- **Live game and prebuilt download:** https://zonoid.ai
+
+### Install and test a prebuilt release
+
+The public release artifacts require no repository checkout or GitHub token.
+
+TypeScript / Node.js:
+
+```sh
+mkdir gaos-judge
+cd gaos-judge
+npm init -y
+npm install 'https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK/releases/download/v0.9.2/yugao-gaos-turn-based-grid-sdk-0.9.2.tgz'
+node --input-type=module -e "import { scoreStars } from '@yugao-gaos/turn-based-grid-sdk/engine'; console.log(scoreStars(6, { three: 6, two: 9 }))"
+```
+
+The final command prints `3`.
+
+Python:
+
+```sh
+python3 -m venv .venv
+.venv/bin/python -m pip install 'https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK/releases/download/v0.9.2/gaos_turn_based_grid_sdk-0.9.2-py3-none-any.whl'
+.venv/bin/python -c "import agilabs_arena; print(agilabs_arena.__name__)"
+```
+
+The final command prints `agilabs_arena`. On Windows, use
+`.venv\Scripts\python` instead of `.venv/bin/python`.
+
+For the product demonstration, visit [zonoid.ai](https://zonoid.ai), register
+with an email address, and download the prebuilt live game.
+
+### Supported platforms
+
+| Surface | Support |
+|---|---|
+| TypeScript engine, protocol, and agent runtime | ES2022 ESM; Node.js 22 recommended and CI-tested |
+| Hosted clients and keyed drivers | ES2022 ESM runtime with standards-compatible `fetch` |
+| Agent CLI launchers | Node.js 22; macOS and Linux tested; selected external CLI must be installed |
+| Python client and environment | Python 3.10+; Python 3.12 CI-tested |
+| Source CI | Ubuntu GitHub Actions; local development also verified on macOS |
+
+### Run the full verification suite
+
+```sh
+git clone https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK.git
+cd GAOS-TurnBasedGrid-SDK
+npm ci
+npm run typecheck
+npm test
+npm run build
+npm run docs:build
+
+python3 -m venv .venv
+.venv/bin/python -m pip install build pytest
+PYTHONPATH=python .venv/bin/python -m pytest python/tests
+.venv/bin/python -m build python
+```
+
+Live integration tests use `ARENA_BASE_URL` and skip automatically when a
+compatible host is unavailable. The deterministic engine, solver, replay,
+agent, and packaging tests run without Zonoid credentials.
+
+### How Codex and GPT-5.6 accelerated the project
+
+Codex with GPT-5.6 Sol was used throughout the production loop:
+
+1. concepting through built-in image generation and editing;
+2. translating approved concepts into production work for Seedance video,
+   World Labs worlds, and Tripo 3D models;
+3. autonomous implementation review, regression discovery, and revision;
+4. coding the game and extracting the reusable SDK, including deterministic
+   settlement, grid mechanisms, agent environments, drivers, tools, and CLIs;
+5. publishing packages, releases, documentation, and presentation websites; and
+6. testing through ordinary suites plus LLM play against the same deterministic
+   reducer used by human-facing gameplay.
+
+The detailed evidence, key decisions, and human approval boundaries are in
+[Building GAOS and Zonoid with GPT-5.6 Sol](docs/building-with-gpt-5-6-sol.md).
 
 ## One agent turn
 
@@ -67,7 +168,7 @@ Repositories with GitHub access can instead pin an exact release tag without
 configuring the npm registry:
 
 ```sh
-npm install 'git+https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK.git#v0.9.0'
+npm install 'git+https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK.git#v0.9.2'
 ```
 
 Use the hosted Arena client:
@@ -174,7 +275,7 @@ The distribution is named `gaos-turn-based-grid-sdk`; the stable import name
 remains `agilabs_arena` for compatibility with existing integrations.
 
 ```sh
-pip install gaos_turn_based_grid_sdk-0.9.0-py3-none-any.whl
+pip install gaos_turn_based_grid_sdk-0.9.2-py3-none-any.whl
 ```
 
 ```python

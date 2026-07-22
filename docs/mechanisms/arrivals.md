@@ -1,0 +1,61 @@
+# Arrival rules
+
+`resolveArrival` dispatches every eligible effect caused by entering or coming
+to rest on a cell. The arrival payload and world state are product-defined, so
+the same mechanism can handle pickups, transforms, hazards, checkpoints,
+teleports, or objective zones.
+
+## Rule shape
+
+```ts
+interface ArrivalRule<TState, TArrival, TEvent> {
+  id: string;
+  priority?: number;
+  applies?(state: TState, arrival: TArrival): boolean;
+  apply(state: TState, arrival: TArrival, events: TEvent[]): void;
+}
+```
+
+`applies` is optional; without it, the rule always runs. `apply` may mutate the
+state and append product events to the shared output array.
+
+## Ordering and visibility
+
+Rules are copied and sorted by ascending priority, defaulting to zero, then by
+stable lexical id. The input array is not reordered.
+
+Conditions are evaluated immediately before their rule runs. This means a
+later rule sees state mutations and events produced by earlier rules in the
+same arrival:
+
+```ts
+const applied = resolveArrival(world, { actorId, cell }, rules, events);
+// applied contains rule ids in actual execution order
+```
+
+All eligible rules run; this is not a first-match dispatch. Use explicit
+priorities and conditions when one rule should make another ineligible.
+
+## Integration
+
+An arrival normally follows a committed state move:
+
+1. movement, push, transport, or landing commits positions;
+2. one arrival job is enqueued for each resting entity;
+3. `resolveArrival` evaluates rules against the committed state;
+4. rule effects enqueue any further same-turn consequences.
+
+Using the [settlement kernel](/settlement) prevents an arrival-triggered
+teleport, pickup, gate update, or second movement from starting an uncontrolled
+nested reducer call.
+
+## Product responsibilities
+
+- Supply unique stable rule ids. The helper does not reject duplicates.
+- Decide whether movement through a cell counts as arrival or only resting does.
+- Decide how many arrival jobs an entity may receive in one turn.
+- Keep product event ordering deterministic inside each rule.
+- Prevent cycles using settlement identities or explicit next-turn deferral.
+
+The returned id list is useful for tests and traces, but product state and
+events remain the authoritative effect results.

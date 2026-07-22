@@ -20,7 +20,7 @@ npm install @yugao-gaos/turn-based-grid-sdk
 You can also pin a repository release without configuring the package registry:
 
 ```sh
-npm install 'git+https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK.git#v0.9.0'
+npm install 'git+https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK.git#v0.9.2'
 ```
 
 ## Choose the narrowest entry point
@@ -66,8 +66,8 @@ console.log(result.get('beta'));  // [2, 0]
 ```
 
 For multi-wave consequences, use [`runSettlementCascade`](/settlement). For
-the full mechanism catalog and product adapter boundaries, see the
-[`./engine` guide](/engine).
+the detailed mechanism catalog, ordering rules, edge cases, and product adapter
+boundaries, see the [mechanism reference](/mechanisms/).
 
 ## Make your reducer agent-ready
 
@@ -127,6 +127,7 @@ console.log(next.grid);
 ## Next steps
 
 - Learn [which layer owns each API](/architecture).
+- Browse the [complete mechanism reference](/mechanisms/).
 - Integrate [same-turn recursive settlement](/settlement).
 - Connect [model drivers, tools, and agent CLIs](/agentic-play).
 - Use the [Python client and Gym-style environment](/python).
