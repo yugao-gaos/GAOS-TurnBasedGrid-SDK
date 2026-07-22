@@ -3,7 +3,8 @@
   "git_user": "yugao-gaos <yu.gao@gaos.ca>",
   "session_id": "codex-mcp-80513-4121bfccdf25f85d3f02370f6f27d4f4",
   "branch": "orch/attempt/codex-publish-sdk-v0-12-0-release",
-  "status": "claimed",
+  "status": "tested",
   "claimed_at": "2026-07-22T22:20:50.863Z",
-  "lease_until": "2026-07-22T23:20:50.863Z"
+  "lease_until": "2026-07-22T23:20:50.863Z",
+  "completed_at": "2026-07-22T22:23:11.404Z"
 }
