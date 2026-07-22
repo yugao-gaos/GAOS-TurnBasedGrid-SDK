@@ -189,6 +189,61 @@ describe('ArenaClient v1 protocol adapter', () => {
     expect(request.mock.calls[1]?.[1]?.signal).toBeUndefined();
   });
 
+  it('supports per-call cancellation and caps response bodies', async () => {
+    const request = vi.fn((_input: RequestInfo | URL, init?: RequestInit) => (
+      new Promise<Response>((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () => reject(init.signal?.reason), { once: true });
+      })
+    ));
+    const controller = new AbortController();
+    const pending = new ArenaClient('https://example.test', undefined, {
+      fetch: request,
+      timeoutMs: 0,
+    }).getTurnEnvelope('s1', { signal: controller.signal });
+    controller.abort(new Error('caller canceled'));
+    await expect(pending).rejects.toThrow('caller canceled');
+
+    const oversized = new ArenaClient('https://example.test', undefined, {
+      fetch: async () => new Response('12345'),
+      maxResponseBytes: 4,
+    });
+    await expect(oversized.getTurnEnvelope('s1')).rejects.toThrow(/exceeds 4 bytes/);
+
+    const oversizedError = new ArenaClient('https://example.test', undefined, {
+      fetch: async () => new Response('12345', { status: 502 }),
+      maxResponseBytes: 4,
+    });
+    await expect(oversizedError.getTurnEnvelope('s1')).rejects.toMatchObject({
+      status: 502,
+      error: 'HTTP response exceeds 4 bytes',
+    });
+  });
+
+  it('strictly validates Arena room metadata before remembering its cursor', async () => {
+    const valid = {
+      matchId: 'm1', sessionId: 'm1', status: 'active', participantId: 'north',
+      readyDeadline: 120_000, turnDeadline: 30_000, expiresAt: null, outcome: null,
+      participants: [
+        { participantId: 'north', claimed: true, connected: true, reconnectDeadline: null },
+      ],
+      turn: turnEnvelope('m1', 0, TURN),
+    };
+    for (const invalid of [
+      { ...valid, status: 'unknown' },
+      { ...valid, readyDeadline: Number.NaN },
+      { ...valid, participants: [{ participantId: 'north', claimed: 'yes', connected: true, reconnectDeadline: null }] },
+      { ...valid, participantId: 'south' },
+      { ...valid, outcome: { winner: 'north', loser: null, reason: 'timeout' } },
+      { ...valid, outcome: { winner: 'south', loser: null, reason: 'game' } },
+    ]) {
+      const client = new ArenaClient('https://example.test', undefined, {
+        fetch: async () => new Response(JSON.stringify(invalid)),
+      });
+      await expect(client.getArenaRoom('m1')).rejects.toThrow(/room fields/);
+      expect(client.getSessionBinding('m1')).toBeUndefined();
+    }
+  });
+
   it('exposes the structured active ticket from a matchmaking conflict', async () => {
     vi.stubGlobal('fetch', vi.fn(async () => new Response(JSON.stringify({
       error: 'profile already has an active Arena ticket',

@@ -6,6 +6,7 @@ plain request/response mapping so any harness (or curl) stays equivalent.
 
 from __future__ import annotations
 
+import asyncio
 import json
 import math
 import re
@@ -24,6 +25,8 @@ ARENA_CONTROL_EXTENSION = "agilabs.arena"
 PARTICIPANT_ID_PATTERN = r"^[A-Za-z0-9_.:@-]{1,128}$"
 _PARTICIPANT_ID_RE = re.compile(PARTICIPANT_ID_PATTERN)
 _MAX_SAFE_INTEGER = 9_007_199_254_740_991
+_ARENA_ROOM_STATUSES = {"connecting", "active", "completed", "expired"}
+_ARENA_OUTCOME_REASONS = {"game", "disconnect", "idle", "abandoned"}
 
 
 def _quote(value: str) -> str:
@@ -239,15 +242,23 @@ class ArenaClient:
         base_url: str = "http://localhost:8899",
         api_key: str | None = None,
         timeout: float | None = 30.0,
+        max_response_bytes: int = 1024 * 1024,
     ):
         if timeout is not None and (
             isinstance(timeout, bool) or not isinstance(timeout, (int, float))
             or not math.isfinite(timeout) or timeout <= 0
         ):
             raise ValueError("timeout must be a positive finite number or None")
+        if (
+            isinstance(max_response_bytes, bool)
+            or not isinstance(max_response_bytes, int)
+            or max_response_bytes < 1
+        ):
+            raise ValueError("max_response_bytes must be a positive integer")
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
         self.timeout = timeout
+        self.max_response_bytes = max_response_bytes
         self._bindings: dict[str, dict[str, Any]] = {}
         self._observed_arena_cursors: dict[str, dict[str, Any]] = {}
 
@@ -283,7 +294,15 @@ class ArenaClient:
         self._bindings[binding["sessionId"]] = binding
         return dict(binding)
 
-    def _call(self, method: str, path: str, body: dict | None = None) -> dict:
+    def _read_body(self, response: Any) -> bytes:
+        raw = response.read(self.max_response_bytes + 1)
+        if len(raw) > self.max_response_bytes:
+            raise ProtocolMismatchError(
+                f"HTTP response exceeds {self.max_response_bytes} bytes"
+            )
+        return raw
+
+    def _call(self, method: str, path: str, body: dict | None = None) -> Any:
         headers = {"content-type": "application/json"}
         if self.api_key:
             headers["authorization"] = f"Bearer {self.api_key}"
@@ -295,9 +314,21 @@ class ArenaClient:
         )
         try:
             with urllib.request.urlopen(req, timeout=self.timeout) as resp:
-                return json.loads(resp.read())
+                raw_body = self._read_body(resp)
+                try:
+                    return json.loads(raw_body)
+                except (json.JSONDecodeError, UnicodeDecodeError) as error:
+                    raise ProtocolMismatchError(
+                        "successful HTTP response is not valid JSON"
+                    ) from error
         except urllib.error.HTTPError as e:
-            raw_body = e.read().decode("utf-8", errors="replace")
+            try:
+                raw_body = self._read_body(e).decode("utf-8", errors="replace")
+            except ProtocolMismatchError:
+                raise ArenaAPIError(
+                    e.code,
+                    f"HTTP error response exceeds {self.max_response_bytes} bytes",
+                ) from None
             try:
                 payload = json.loads(raw_body)
                 error = payload.get("error", str(e))
@@ -461,6 +492,24 @@ class ArenaClient:
         participant = data.get("participantId")
         if not isinstance(participant, str) or _PARTICIPANT_ID_RE.fullmatch(participant) is None:
             raise ProtocolMismatchError("Arena room participant missing")
+        participants = data.get("participants")
+        participant_ids = {
+            item.get("participantId")
+            for item in participants
+            if isinstance(item, dict) and isinstance(item.get("participantId"), str)
+        } if isinstance(participants, list) else set()
+        if (
+            data.get("status") not in _ARENA_ROOM_STATUSES
+            or not _is_finite_number(data.get("readyDeadline"))
+            or not _is_nullable_finite_number(data.get("turnDeadline"))
+            or not _is_nullable_finite_number(data.get("expiresAt"))
+            or not isinstance(participants, list)
+            or not all(_is_arena_participant(item) for item in participants)
+            or len({item["participantId"] for item in participants}) != len(participants)
+            or participant not in participant_ids
+            or not _is_arena_outcome(data.get("outcome"), participant_ids)
+        ):
+            raise ProtocolMismatchError("Arena room fields are invalid")
         turn = parse_turn_result(data.get("turn"))
         if turn["sessionId"] != match_id:
             raise ProtocolMismatchError("Arena room turn does not match request")
@@ -617,3 +666,124 @@ class ArenaClient:
 
     def challenge_boards(self, game_id: str) -> dict:
         return self._call("GET", f"/leaderboards/challenge/{_quote(game_id)}")
+
+
+def _is_finite_number(value: Any) -> bool:
+    return (
+        isinstance(value, (int, float))
+        and not isinstance(value, bool)
+        and math.isfinite(value)
+    )
+
+
+def _is_nullable_finite_number(value: Any) -> bool:
+    return value is None or _is_finite_number(value)
+
+
+def _is_arena_participant(value: Any) -> bool:
+    return (
+        isinstance(value, dict)
+        and isinstance(value.get("participantId"), str)
+        and _PARTICIPANT_ID_RE.fullmatch(value["participantId"]) is not None
+        and isinstance(value.get("claimed"), bool)
+        and isinstance(value.get("connected"), bool)
+        and _is_nullable_finite_number(value.get("reconnectDeadline"))
+    )
+
+
+def _is_arena_outcome(value: Any, participant_ids: set[Any]) -> bool:
+    if value is None:
+        return True
+    return (
+        isinstance(value, dict)
+        and (value.get("winner") is None or (
+            isinstance(value.get("winner"), str)
+            and value.get("winner") in participant_ids
+        ))
+        and (value.get("loser") is None or (
+            isinstance(value.get("loser"), str)
+            and value.get("loser") in participant_ids
+        ))
+        and value.get("reason") in _ARENA_OUTCOME_REASONS
+        and ("gameReason" not in value or isinstance(value.get("gameReason"), str))
+    )
+
+
+class AsyncArenaClient:
+    """Async facade over the dependency-free synchronous client.
+
+    Requests run in worker threads so asyncio applications do not block their
+    event loop. The synchronous client remains available as ``sync_client``.
+    """
+
+    def __init__(
+        self,
+        base_url: str = "http://localhost:8899",
+        api_key: str | None = None,
+        timeout: float | None = 30.0,
+        max_response_bytes: int = 1024 * 1024,
+    ):
+        self.sync_client = ArenaClient(
+            base_url,
+            api_key,
+            timeout,
+            max_response_bytes,
+        )
+        self._lock = asyncio.Lock()
+
+    async def _run(self, name: str, *args: Any, **kwargs: Any) -> Any:
+        async with self._lock:
+            return await asyncio.to_thread(
+                getattr(self.sync_client, name), *args, **kwargs
+            )
+
+    async def create_session(self, *args: Any, **kwargs: Any) -> tuple[str, Turn]:
+        return await self._run("create_session", *args, **kwargs)
+
+    async def get_turn_envelope(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        return await self._run("get_turn_envelope", *args, **kwargs)
+
+    async def get_turn(self, *args: Any, **kwargs: Any) -> Turn:
+        return await self._run("get_turn", *args, **kwargs)
+
+    async def submit_intent(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        return await self._run("submit_intent", *args, **kwargs)
+
+    async def arena_catalog(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        return await self._run("arena_catalog", *args, **kwargs)
+
+    async def join_arena_queue(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        return await self._run("join_arena_queue", *args, **kwargs)
+
+    async def arena_queue_ticket(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        return await self._run("arena_queue_ticket", *args, **kwargs)
+
+    async def cancel_arena_queue_ticket(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        return await self._run("cancel_arena_queue_ticket", *args, **kwargs)
+
+    async def get_arena_room(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        return await self._run("get_arena_room", *args, **kwargs)
+
+    async def connect_arena_match(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        return await self._run("connect_arena_match", *args, **kwargs)
+
+    async def set_arena_presence(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        return await self._run("set_arena_presence", *args, **kwargs)
+
+    async def heartbeat_arena_match(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        return await self._run("heartbeat_arena_match", *args, **kwargs)
+
+    async def disconnect_arena_match(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        return await self._run("disconnect_arena_match", *args, **kwargs)
+
+    async def get_arena_turn_envelope(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        return await self._run("get_arena_turn_envelope", *args, **kwargs)
+
+    async def submit_arena_intent(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        return await self._run("submit_arena_intent", *args, **kwargs)
+
+    async def submit_action(self, *args: Any, **kwargs: Any) -> Turn:
+        return await self._run("submit_action", *args, **kwargs)
+
+    async def submit_session(self, *args: Any, **kwargs: Any) -> dict[str, Any]:
+        return await self._run("submit_session", *args, **kwargs)

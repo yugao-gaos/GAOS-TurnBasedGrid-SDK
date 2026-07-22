@@ -54,6 +54,30 @@ describe('simultaneous movement', () => {
     expect(at(result, 'low')).toEqual([3, 1]);
   });
 
+  it('breaks equal-priority ties by stable id regardless of input order', () => {
+    const proposals = [
+      mover('beta', [1, 1], [2, 1], 3),
+      mover('alpha', [3, 1], [2, 1], 3),
+    ];
+    for (const ordered of [proposals, [...proposals].reverse()]) {
+      const result = resolveMoves(ordered, open);
+      expect(at(result, 'alpha')).toEqual([2, 1]);
+      expect(at(result, 'beta')).toEqual([1, 1]);
+    }
+  });
+
+  it('rejects malformed or ambiguous mover inputs', () => {
+    expect(() => resolveMoves([
+      mover('same', [1, 1], [2, 1]),
+      mover('same', [3, 1], [2, 1]),
+    ], open)).toThrow(/unique/);
+    expect(() => resolveMoves([{ ...mover('bad', [1, 1], [2, 1]), priority: NaN }], open))
+      .toThrow(/priority/);
+    expect(() => resolveMoves([{
+      ...mover('bad', [1, 1], [2, 1]), footprint: { width: 0, height: 1 },
+    }], open)).toThrow(/footprint/);
+  });
+
   it('blocks head-on swaps unless one mover consents', () => {
     const blocked = resolveMoves([
       mover('a', [1, 1], [2, 1]),

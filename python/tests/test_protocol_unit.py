@@ -1,9 +1,19 @@
+import asyncio
 import io
+import time
 import urllib.error
 
 import pytest
 
-from agilabs_arena import ArenaAPIError, ArenaClient, ProtocolMismatchError, Turn, parse_turn_result
+from agilabs_arena import (
+    ArenaAPIError,
+    ArenaClient,
+    ArenaEnv,
+    AsyncArenaClient,
+    ProtocolMismatchError,
+    Turn,
+    parse_turn_result,
+)
 
 
 TURN = {
@@ -213,6 +223,50 @@ def test_configures_timeout_quotes_paths_and_preserves_non_json_error(monkeypatc
     assert caught.value.body == "upstream unavailable"
 
 
+def test_normalizes_non_json_success_and_caps_response_bytes(monkeypatch):
+    monkeypatch.setattr("urllib.request.urlopen", lambda *_args, **_kwargs: io.BytesIO(b"not-json"))
+    with pytest.raises(ProtocolMismatchError, match="not valid JSON"):
+        ArenaClient("https://example.test").arena_catalog()
+
+    monkeypatch.setattr("urllib.request.urlopen", lambda *_args, **_kwargs: io.BytesIO(b"12345"))
+    with pytest.raises(ProtocolMismatchError, match="exceeds 4 bytes"):
+        ArenaClient("https://example.test", max_response_bytes=4).arena_catalog()
+    with pytest.raises(ValueError, match="max_response_bytes"):
+        ArenaClient(max_response_bytes=0)
+
+
+def test_async_client_runs_sync_requests_off_the_event_loop():
+    client = AsyncArenaClient("https://example.test")
+    client.sync_client.get_turn_envelope = lambda session_id: {"sessionId": session_id}  # type: ignore[method-assign]
+    assert asyncio.run(client.get_turn_envelope("s1")) == {"sessionId": "s1"}
+    assert ArenaEnv("level-1").play_method == "autonomous_local"
+
+
+def test_async_client_serializes_mutable_binding_operations():
+    client = AsyncArenaClient("https://example.test")
+    active = 0
+    maximum = 0
+
+    def fake_get(session_id):
+        nonlocal active, maximum
+        active += 1
+        maximum = max(maximum, active)
+        time.sleep(0.01)
+        active -= 1
+        return {"sessionId": session_id}
+
+    client.sync_client.get_turn_envelope = fake_get  # type: ignore[method-assign]
+
+    async def run_both():
+        return await asyncio.gather(
+            client.get_turn_envelope("s1"),
+            client.get_turn_envelope("s2"),
+        )
+
+    assert asyncio.run(run_both()) == [{"sessionId": "s1"}, {"sessionId": "s2"}]
+    assert maximum == 1
+
+
 def test_discovers_hosted_arena_catalog():
     calls = []
     client = ArenaClient("https://example.test")
@@ -365,6 +419,38 @@ def test_arena_single_match_queue_turn_presence_and_room_outcome():
     assert calls[6][2] == {"connected": False}
 
 
+def test_strictly_validates_arena_room_metadata():
+    room_turn = envelope()
+    room_turn["sessionId"] = "m1"
+    room_turn["turnId"] = "m1:0"
+    valid = {
+        "matchId": "m1",
+        "sessionId": "m1",
+        "status": "active",
+        "participantId": "north",
+        "readyDeadline": 120_000,
+        "turnDeadline": 30_000,
+        "expiresAt": None,
+        "participants": [
+            {"participantId": "north", "claimed": True, "connected": True, "reconnectDeadline": None}
+        ],
+        "outcome": None,
+        "turn": room_turn,
+    }
+    client = ArenaClient("https://example.test")
+    for invalid in (
+        {**valid, "status": "unknown"},
+        {**valid, "readyDeadline": float("nan")},
+        {**valid, "participants": [{"participantId": "north", "claimed": "yes", "connected": True, "reconnectDeadline": None}]},
+        {**valid, "participantId": "south"},
+        {**valid, "outcome": {"winner": "north", "loser": None, "reason": "timeout"}},
+        {**valid, "outcome": {"winner": "south", "loser": None, "reason": "game"}},
+    ):
+        with pytest.raises(ProtocolMismatchError, match="room fields"):
+            client._parse_arena_room(invalid, "m1")
+        assert client.get_session_binding("m1") is None
+
+
 def test_cancels_waiting_arena_ticket():
     waiting = {
         "queueId": "global.open",
@@ -406,7 +492,9 @@ def test_arena_turn_poll_does_not_invent_a_solo_seat_binding():
         "readyDeadline": 120_000,
         "turnDeadline": 30_000,
         "expiresAt": None,
-        "participants": [],
+        "participants": [
+            {"participantId": "south", "claimed": True, "connected": True, "reconnectDeadline": None}
+        ],
         "outcome": None,
         "turn": turn,
     }
@@ -452,7 +540,9 @@ def test_arena_same_world_control_steps_get_distinct_retry_keys():
         "readyDeadline": 120_000,
         "turnDeadline": 30_000,
         "expiresAt": None,
-        "participants": [],
+        "participants": [
+            {"participantId": "north", "claimed": True, "connected": True, "reconnectDeadline": None}
+        ],
         "outcome": None,
         "turn": match_envelope(0),
     }

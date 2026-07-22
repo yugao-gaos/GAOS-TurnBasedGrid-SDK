@@ -13,6 +13,7 @@ import {
   isParticipantId,
   type CommandSubmission,
   type PendingEnvelope,
+  type ProtocolExtensions,
   type TurnCursor,
   type TurnEnvelope,
   type TurnResult,
@@ -32,6 +33,7 @@ export {
   type JsonPrimitive,
   type JsonValue,
   type PendingEnvelope,
+  type ProtocolExtensions,
   type TurnCursor,
   type TurnEnvelope,
   type TurnResult,
@@ -39,6 +41,11 @@ export {
 
 /** Namespaced hosted-Arena concurrency extension; additive to Turns v1. */
 export const ARENA_CONTROL_EXTENSION = 'agilabs.arena' as const;
+
+/** Typed Arena payload carried inside the open Turns v1 extension object. */
+export interface ArenaControlExtensions extends ProtocolExtensions {
+  [ARENA_CONTROL_EXTENSION]: { controlRevision: number };
+}
 
 export interface ActionDef {
   id: string;
@@ -481,6 +488,13 @@ export interface ArenaClientOptions {
   timeoutMs?: number;
   /** Signal shared by every request made by this client. */
   signal?: AbortSignal;
+  /** Maximum response body size in bytes. Defaults to 1 MiB. */
+  maxResponseBytes?: number;
+}
+
+export interface ArenaCallOptions {
+  /** Signal scoped to this request only. */
+  signal?: AbortSignal;
 }
 
 function awaitWithSignal<T>(promise: Promise<T>, signal?: AbortSignal): Promise<T> {
@@ -491,6 +505,54 @@ function awaitWithSignal<T>(promise: Promise<T>, signal?: AbortSignal): Promise<
     signal.addEventListener('abort', onAbort, { once: true });
     promise.then(resolve, reject).finally(() => signal.removeEventListener('abort', onAbort));
   });
+}
+
+class ResponseTooLargeError extends Error {}
+
+async function readResponseText(response: Response, maxBytes: number): Promise<string> {
+  if (!response.body) return '';
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  let bytes = 0;
+  let text = '';
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    bytes += value.byteLength;
+    if (bytes > maxBytes) {
+      await reader.cancel();
+      throw new ResponseTooLargeError(`HTTP response exceeds ${maxBytes} bytes`);
+    }
+    text += decoder.decode(value, { stream: true });
+  }
+  return text + decoder.decode();
+}
+
+const ARENA_ROOM_STATUSES = new Set<ArenaRoom['status']>([
+  'connecting', 'active', 'completed', 'expired',
+]);
+const ARENA_OUTCOME_REASONS = new Set<ArenaOutcome['reason']>([
+  'game', 'disconnect', 'idle', 'abandoned',
+]);
+
+function nullableFiniteNumber(value: unknown): boolean {
+  return value === null || (typeof value === 'number' && Number.isFinite(value));
+}
+
+function validateArenaOutcome(
+  value: unknown,
+  participantIds: ReadonlySet<string>,
+): value is ArenaOutcome | null {
+  if (value === null) return true;
+  if (!value || typeof value !== 'object' || Array.isArray(value)) return false;
+  const outcome = value as Record<string, unknown>;
+  return (outcome['winner'] === null
+      || (isParticipantId(outcome['winner']) && participantIds.has(outcome['winner'])))
+    && (outcome['loser'] === null
+      || (isParticipantId(outcome['loser']) && participantIds.has(outcome['loser'])))
+    && typeof outcome['reason'] === 'string'
+    && ARENA_OUTCOME_REASONS.has(outcome['reason'] as ArenaOutcome['reason'])
+    && (!Object.hasOwn(outcome, 'gameReason') || typeof outcome['gameReason'] === 'string');
 }
 
 export class ArenaClient {
@@ -508,6 +570,10 @@ export class ArenaClient {
     if (options.timeoutMs !== undefined
       && (!Number.isSafeInteger(options.timeoutMs) || options.timeoutMs < 0)) {
       throw new RangeError('timeoutMs must be a non-negative safe integer');
+    }
+    if (options.maxResponseBytes !== undefined
+      && (!Number.isSafeInteger(options.maxResponseBytes) || options.maxResponseBytes < 1)) {
+      throw new RangeError('maxResponseBytes must be a positive safe integer');
     }
   }
 
@@ -562,17 +628,52 @@ export class ArenaClient {
     if (typeof value['participantId'] !== 'string' || !isParticipantId(value['participantId'])) {
       throw new ProtocolMismatchError('Arena room participant missing');
     }
+    const participants = value['participants'];
+    const participantIds = new Set(
+      Array.isArray(participants)
+        ? participants.map((entry) => (entry as Record<string, unknown>)?.['participantId'])
+          .filter((id): id is string => typeof id === 'string')
+        : [],
+    );
+    if (
+      typeof value['status'] !== 'string'
+      || !ARENA_ROOM_STATUSES.has(value['status'] as ArenaRoom['status'])
+      || typeof value['readyDeadline'] !== 'number' || !Number.isFinite(value['readyDeadline'])
+      || !nullableFiniteNumber(value['turnDeadline'])
+      || !nullableFiniteNumber(value['expiresAt'])
+      || !Array.isArray(participants)
+      || !participants.every((entry) => {
+        if (!entry || typeof entry !== 'object' || Array.isArray(entry)) return false;
+        const participant = entry as Record<string, unknown>;
+        return isParticipantId(participant['participantId'])
+          && typeof participant['claimed'] === 'boolean'
+          && typeof participant['connected'] === 'boolean'
+          && nullableFiniteNumber(participant['reconnectDeadline']);
+      })
+      || new Set(participants.map((entry) => (entry as Record<string, unknown>)['participantId'])).size
+        !== participants.length
+      || !participantIds.has(value['participantId'])
+      || !validateArenaOutcome(value['outcome'], participantIds)
+    ) {
+      throw new ProtocolMismatchError('Arena room fields are invalid');
+    }
     const turn = this.parse<T>(value['turn'], expectedSessionId);
     this.remember(turn, value['participantId']);
     return { ...value, turn } as unknown as ArenaRoom<T>;
   }
 
-  private async call<T>(method: string, path: string, body?: unknown): Promise<T> {
+  private async call<T>(
+    method: string,
+    path: string,
+    body?: unknown,
+    callOptions: ArenaCallOptions = {},
+  ): Promise<T> {
     const timeoutMs = this.options.timeoutMs ?? 30_000;
     const timeout = timeoutMs > 0
       ? AbortSignal.timeout(timeoutMs)
       : undefined;
-    const signals = [this.options.signal, timeout].filter((signal): signal is AbortSignal => signal !== undefined);
+    const signals = [this.options.signal, callOptions.signal, timeout]
+      .filter((signal): signal is AbortSignal => signal !== undefined);
     const signal = signals.length > 1 ? AbortSignal.any(signals) : signals[0];
     const key = typeof this.apiKey === 'function'
       ? await awaitWithSignal(Promise.resolve().then(() => (this.apiKey as Exclude<ApiKeyProvider, string>)()), signal)
@@ -586,7 +687,18 @@ export class ArenaClient {
         ...(key ? { authorization: `Bearer ${key}` } : {}),
       },
     });
-    const responseBody = await res.text();
+    const maxResponseBytes = this.options.maxResponseBytes ?? 1024 * 1024;
+    let responseBody: string;
+    try {
+      responseBody = await readResponseText(res, maxResponseBytes);
+    } catch (error) {
+      if (!(error instanceof ResponseTooLargeError)) throw error;
+      if (res.ok) throw new ProtocolMismatchError(error.message);
+      if (res.status === 422) {
+        throw new IllegalActionRejected(res.status, error.message);
+      }
+      throw new ArenaApiError(res.status, error.message);
+    }
     let data: (T & { error?: string; code?: string }) | undefined;
     try {
       data = responseBody ? JSON.parse(responseBody) as T & { error?: string; code?: string } : undefined;
@@ -606,16 +718,23 @@ export class ArenaClient {
     return data;
   }
 
-  async createSession(req: SessionRequest, participantId = 'player'): Promise<SessionStart> {
-    const result = this.parse<Turn>(await this.call('POST', '/v1/sessions', req));
+  async createSession(
+    req: SessionRequest,
+    participantId = 'player',
+    callOptions: ArenaCallOptions = {},
+  ): Promise<SessionStart> {
+    const result = this.parse<Turn>(await this.call('POST', '/v1/sessions', req, callOptions));
     if (result.kind !== 'turn') throw new ProtocolMismatchError('new session must start resolved');
     const binding = this.remember(result, participantId);
     return { sessionId: result.sessionId, turn: result.turn, binding };
   }
 
-  async getTurnEnvelope(sessionId: string): Promise<TurnResult<Turn>> {
+  async getTurnEnvelope(
+    sessionId: string,
+    callOptions: ArenaCallOptions = {},
+  ): Promise<TurnResult<Turn>> {
     const result = this.parse<Turn>(
-      await this.call('GET', `/v1/sessions/${encodeURIComponent(sessionId)}/turn`),
+      await this.call('GET', `/v1/sessions/${encodeURIComponent(sessionId)}/turn`, undefined, callOptions),
       sessionId,
     );
     this.remember(result);
@@ -623,8 +742,8 @@ export class ArenaClient {
   }
 
   /** Compatibility view: returns the latest resolved observation while pending. */
-  async getTurn(sessionId: string): Promise<Turn> {
-    return (await this.getTurnEnvelope(sessionId)).turn;
+  async getTurn(sessionId: string, callOptions: ArenaCallOptions = {}): Promise<Turn> {
+    return (await this.getTurnEnvelope(sessionId, callOptions)).turn;
   }
 
   /** Stable v1 primitive for any JSON command and any game observation shape. */
@@ -635,6 +754,7 @@ export class ArenaClient {
       participantId?: string;
       submissionId?: string;
       cursor?: TurnCursor;
+      signal?: AbortSignal;
     } = {},
   ): Promise<TurnResult<TObservation>> {
     return this.submitIntentTo(
@@ -654,6 +774,7 @@ export class ArenaClient {
       submissionId?: string;
       cursor?: TurnCursor;
       controlRevision?: number;
+      signal?: AbortSignal;
     },
   ): Promise<TurnResult<TObservation>> {
     let binding = this.bindings.get(sessionId);
@@ -663,7 +784,7 @@ export class ArenaClient {
           'explicit submissionId requires the original cursor or a restored session binding',
         );
       }
-      await this.getTurnEnvelope(sessionId);
+      await this.getTurnEnvelope(sessionId, { signal: opts.signal });
       binding = this.bindings.get(sessionId);
     }
     const cursor = opts.cursor ?? binding;
@@ -680,11 +801,13 @@ export class ArenaClient {
       submissionId: opts.submissionId ?? `${participantId}:${cursor.turnId}`,
       command,
       ...(opts.controlRevision !== undefined
-        ? { extensions: { [ARENA_CONTROL_EXTENSION]: { controlRevision: opts.controlRevision } } }
+        ? { extensions: {
+          [ARENA_CONTROL_EXTENSION]: { controlRevision: opts.controlRevision },
+        } satisfies ArenaControlExtensions }
         : {}),
     };
     const result = this.parse<TObservation>(
-      await this.call('POST', path, submission),
+      await this.call('POST', path, submission, { signal: opts.signal }),
       sessionId,
     );
     this.remember(result, participantId);
@@ -693,30 +816,41 @@ export class ArenaClient {
 
   // ------------------------------------------------ hosted Arena mode
 
-  arenaCatalog(): Promise<ArenaCatalog> {
-    return this.call('GET', '/v1/arena/maps');
+  arenaCatalog(callOptions: ArenaCallOptions = {}): Promise<ArenaCatalog> {
+    return this.call('GET', '/v1/arena/maps', undefined, callOptions);
   }
 
   /** Join the authenticated live queue. Reuse requestId after network ambiguity. */
-  joinArenaQueue(req: ArenaQueueRequest): Promise<ArenaQueueTicket> {
+  joinArenaQueue(req: ArenaQueueRequest, callOptions: ArenaCallOptions = {}): Promise<ArenaQueueTicket> {
     return this.call('POST', '/v1/arena/matchmaking', {
       ...req,
       requestId: req.requestId ?? crypto.randomUUID(),
-    });
+    }, callOptions);
   }
 
-  arenaQueueTicket(queueId: string, ticketId: string): Promise<ArenaQueueTicket> {
-    return this.call('GET', `/v1/arena/matchmaking/${encodeURIComponent(queueId)}/${encodeURIComponent(ticketId)}`);
+  arenaQueueTicket(
+    queueId: string,
+    ticketId: string,
+    callOptions: ArenaCallOptions = {},
+  ): Promise<ArenaQueueTicket> {
+    return this.call('GET', `/v1/arena/matchmaking/${encodeURIComponent(queueId)}/${encodeURIComponent(ticketId)}`, undefined, callOptions);
   }
 
-  cancelArenaQueueTicket(queueId: string, ticketId: string): Promise<ArenaQueueTicket> {
-    return this.call('DELETE', `/v1/arena/matchmaking/${encodeURIComponent(queueId)}/${encodeURIComponent(ticketId)}`);
+  cancelArenaQueueTicket(
+    queueId: string,
+    ticketId: string,
+    callOptions: ArenaCallOptions = {},
+  ): Promise<ArenaQueueTicket> {
+    return this.call('DELETE', `/v1/arena/matchmaking/${encodeURIComponent(queueId)}/${encodeURIComponent(ticketId)}`, undefined, callOptions);
   }
 
   /** Read-only room recovery snapshot; it does not claim or heartbeat a seat. */
-  async getArenaRoom<TObservation = Turn>(matchId: string): Promise<ArenaRoom<TObservation>> {
+  async getArenaRoom<TObservation = Turn>(
+    matchId: string,
+    callOptions: ArenaCallOptions = {},
+  ): Promise<ArenaRoom<TObservation>> {
     return this.parseArenaRoom<TObservation>(
-      await this.call('GET', `/v1/arena/matches/${encodeURIComponent(matchId)}`),
+      await this.call('GET', `/v1/arena/matches/${encodeURIComponent(matchId)}`, undefined, callOptions),
       matchId,
     );
   }
@@ -724,31 +858,33 @@ export class ArenaClient {
   async setArenaPresence<TObservation = Turn>(
     matchId: string,
     connected: boolean,
+    callOptions: ArenaCallOptions = {},
   ): Promise<ArenaRoom<TObservation>> {
     return this.parseArenaRoom<TObservation>(
-      await this.call('POST', `/v1/arena/matches/${encodeURIComponent(matchId)}/presence`, { connected }),
+      await this.call('POST', `/v1/arena/matches/${encodeURIComponent(matchId)}/presence`, { connected }, callOptions),
       matchId,
     );
   }
 
-  heartbeatArenaMatch<TObservation = Turn>(matchId: string): Promise<ArenaRoom<TObservation>> {
-    return this.setArenaPresence<TObservation>(matchId, true);
+  heartbeatArenaMatch<TObservation = Turn>(matchId: string, callOptions: ArenaCallOptions = {}): Promise<ArenaRoom<TObservation>> {
+    return this.setArenaPresence<TObservation>(matchId, true, callOptions);
   }
 
   /** Required after matching. The second claimed seat atomically starts turn timers. */
-  connectArenaMatch<TObservation = Turn>(matchId: string): Promise<ArenaRoom<TObservation>> {
-    return this.setArenaPresence<TObservation>(matchId, true);
+  connectArenaMatch<TObservation = Turn>(matchId: string, callOptions: ArenaCallOptions = {}): Promise<ArenaRoom<TObservation>> {
+    return this.setArenaPresence<TObservation>(matchId, true, callOptions);
   }
 
-  disconnectArenaMatch<TObservation = Turn>(matchId: string): Promise<ArenaRoom<TObservation>> {
-    return this.setArenaPresence<TObservation>(matchId, false);
+  disconnectArenaMatch<TObservation = Turn>(matchId: string, callOptions: ArenaCallOptions = {}): Promise<ArenaRoom<TObservation>> {
+    return this.setArenaPresence<TObservation>(matchId, false, callOptions);
   }
 
   async getArenaTurnEnvelope<TObservation = Turn>(
     matchId: string,
+    callOptions: ArenaCallOptions = {},
   ): Promise<TurnResult<TObservation>> {
     const result = this.parse<TObservation>(
-      await this.call('GET', `/v1/arena/matches/${encodeURIComponent(matchId)}/turn`),
+      await this.call('GET', `/v1/arena/matches/${encodeURIComponent(matchId)}/turn`, undefined, callOptions),
       matchId,
     );
     const binding = this.bindings.get(matchId);
@@ -774,7 +910,12 @@ export class ArenaClient {
   async submitArenaIntent<TCommand, TObservation = Turn>(
     matchId: string,
     command: TCommand,
-    opts: { submissionId?: string; cursor?: TurnCursor; controlRevision?: number } = {},
+    opts: {
+      submissionId?: string;
+      cursor?: TurnCursor;
+      controlRevision?: number;
+      signal?: AbortSignal;
+    } = {},
   ): Promise<TurnResult<TObservation>> {
     let binding = this.bindings.get(matchId);
     const observedCursor = opts.submissionId !== undefined
@@ -788,7 +929,7 @@ export class ArenaClient {
           'explicit submissionId requires the original cursor or a restored Arena session binding',
         );
       }
-      await this.getArenaRoom<TObservation>(matchId);
+      await this.getArenaRoom<TObservation>(matchId, { signal: opts.signal });
       binding = this.bindings.get(matchId);
     }
     const cursor = originalCursor ?? binding;
@@ -827,6 +968,7 @@ export class ArenaClient {
       submissionId?: string;
       pollIntervalMs?: number;
       maxPollAttempts?: number;
+      signal?: AbortSignal;
     } = {},
   ): Promise<Turn> {
     const result = await this.submitIntent<ActionSubmit, Turn>(sessionId, action, opts);
@@ -834,8 +976,8 @@ export class ArenaClient {
     const interval = opts.pollIntervalMs ?? 250;
     const attempts = opts.maxPollAttempts ?? 120;
     for (let attempt = 0; attempt < attempts; attempt++) {
-      await new Promise<void>((resolve) => setTimeout(resolve, interval));
-      const polled = await this.getTurnEnvelope(sessionId);
+      await awaitWithSignal(new Promise<void>((resolve) => setTimeout(resolve, interval)), opts.signal);
+      const polled = await this.getTurnEnvelope(sessionId, { signal: opts.signal });
       if (polled.kind === 'turn' && polled.revision > result.revision) return polled.turn;
     }
     throw new ArenaApiError(408, `timed out waiting for turn after ${attempts} polls`);
@@ -844,37 +986,41 @@ export class ArenaClient {
   submitSession(
     sessionId: string,
     opts?: { harnessCategory?: 'llm-driven' | 'solver-assisted' },
+    callOptions: ArenaCallOptions = {},
   ): Promise<SubmitSummary> {
-    return this.call('POST', `/v1/sessions/${encodeURIComponent(sessionId)}/submit`, opts ?? {});
+    return this.call('POST', `/v1/sessions/${encodeURIComponent(sessionId)}/submit`, opts ?? {}, callOptions);
   }
 
-  labLevelVersions(): Promise<Array<{ levelId: string; version: number }>> {
-    return this.call('GET', '/levels/lab/versions');
+  labLevelVersions(callOptions: ArenaCallOptions = {}): Promise<Array<{ levelId: string; version: number }>> {
+    return this.call('GET', '/levels/lab/versions', undefined, callOptions);
   }
 
   /** Self-report an unpaid Challenge claim (authenticated, stored unverified). */
-  reportUnpaidChallenge(claim: { gameId: string; stars: number; steps: number }): Promise<{ recorded: boolean }> {
-    return this.call('POST', '/leaderboards/challenge/unpaid', claim);
+  reportUnpaidChallenge(
+    claim: { gameId: string; stars: number; steps: number },
+    callOptions: ArenaCallOptions = {},
+  ): Promise<{ recorded: boolean }> {
+    return this.call('POST', '/leaderboards/challenge/unpaid', claim, callOptions);
   }
 
-  challengeBoards(gameId: string): Promise<{ paid: unknown[]; unpaid: unknown[] }> {
-    return this.call('GET', `/leaderboards/challenge/${encodeURIComponent(gameId)}`);
+  challengeBoards(gameId: string, callOptions: ArenaCallOptions = {}): Promise<{ paid: unknown[]; unpaid: unknown[] }> {
+    return this.call('GET', `/leaderboards/challenge/${encodeURIComponent(gameId)}`, undefined, callOptions);
   }
 
   // ------------------------------------------------ agent API keys (JWT only)
 
   /** The caller's agent keys — metadata only, never hashes or plaintexts. */
-  listKeys(): Promise<AgentKeyInfo[]> {
-    return this.call('GET', '/keys');
+  listKeys(callOptions: ArenaCallOptions = {}): Promise<AgentKeyInfo[]> {
+    return this.call('GET', '/keys', undefined, callOptions);
   }
 
   /** Mint an agent key. The plaintext `key` is returned exactly ONCE. */
-  createKey(label?: string): Promise<{ key: string; label: string | null }> {
-    return this.call('POST', '/keys', label === undefined ? {} : { label });
+  createKey(label?: string, callOptions: ArenaCallOptions = {}): Promise<{ key: string; label: string | null }> {
+    return this.call('POST', '/keys', label === undefined ? {} : { label }, callOptions);
   }
 
   /** Revoke an agent key by id (owners only; admins can revoke any). */
-  revokeKey(id: string): Promise<{ revoked: boolean }> {
-    return this.call('POST', `/keys/${encodeURIComponent(id)}/revoke`);
+  revokeKey(id: string, callOptions: ArenaCallOptions = {}): Promise<{ revoked: boolean }> {
+    return this.call('POST', `/keys/${encodeURIComponent(id)}/revoke`, undefined, callOptions);
   }
 }

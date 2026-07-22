@@ -35,7 +35,7 @@ export function planPushChain<TMetadata = never>(
   let current: Cell = start;
   while (options.occupied(current)) {
     if (options.skip?.(current)) return steps;
-    if (steps.length > options.maxItems) return null;
+    if (steps.length >= options.maxItems) return null;
     const destination = options.destination(current, direction);
     if (options.blocked(destination)) return null;
     steps.push({
