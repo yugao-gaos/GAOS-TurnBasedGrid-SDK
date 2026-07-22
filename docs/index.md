@@ -24,6 +24,17 @@ features:
     details: The SDK owns how reusable mechanics behave. Your product retains characters, levels, objectives, tuning, authentication, and presentation.
 ---
 
+<div class="hero-video">
+  <iframe
+    src="https://www.youtube-nocookie.com/embed/gOUGajF9Vug"
+    title="GAOS visual preview"
+    loading="lazy"
+    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+    referrerpolicy="strict-origin-when-cross-origin"
+    allowfullscreen
+  ></iframe>
+</div>
+
 **Deterministic grid mechanics and multiplayer infrastructure for agent-ready games.**
 
 ## Our mission
