@@ -39,6 +39,16 @@ separate from the SDK.
 from concepting and specialist asset production through engineering,
 publishing, and model-play testing.
 
+## One agent turn
+
+| State | Legal actions | Agent chooses | Deterministic result |
+|---|---|---|---|
+| `position: 1`<br>`status: playing`<br>`actionsUsed: 1` | `{ id: 'advance' }`<br>`{ id: 'jump', index: 2 }` | `{ id: 'jump', index: 2 }` | `position: 3` → **won**<br>`reward: +3` · `totalReward: 3` · **3★** |
+
+`AgentEnvironment` exposes the product state and concrete legal actions,
+validates the agent's choice, applies the injected reducer once, and returns
+the scoring result with transcript-ready metrics.
+
 ## TypeScript
 
 The npm package is published through GitHub Packages. Configure the GitHub npm

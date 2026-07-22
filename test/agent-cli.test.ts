@@ -89,6 +89,25 @@ describe('CLI agent recipes', () => {
     });
   });
 
+  it('starts and resumes a Claude conversation with the same session id', () => {
+    const registry = createDefaultCliAgentRegistry();
+    const spec = registry.require('claude');
+    const sessionId = '00000000-0000-4000-8000-000000000001';
+    const initial = spec.launch({ mcpUrl: 'http://localhost/mcp', prompt: 'play', sessionId });
+    const resumed = spec.launch({
+      mcpUrl: 'http://localhost/mcp',
+      prompt: 'coach interrupted; continue',
+      sessionId,
+      resume: true,
+    });
+    expect(spec.supportsResume).toBe(true);
+    expect(initial.argv).toContain('--session-id');
+    expect(initial.argv).toContain(sessionId);
+    expect(resumed.argv).toContain('--resume');
+    expect(resumed.argv).toContain(sessionId);
+    expect(resumed.argv).not.toContain('--session-id');
+  });
+
   it('parses transcript formats without surfacing unrelated JSON', () => {
     expect(parseStreamJson(JSON.stringify({
       type: 'assistant',

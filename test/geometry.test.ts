@@ -3,6 +3,7 @@ import {
   bresenhamLine,
   coneFieldCells,
   lineOfSightClear,
+  nearestReachableCellPath,
   shortestGridPath,
 } from '../src/engine/index.js';
 
@@ -30,6 +31,32 @@ describe('grid geometry', () => {
       isBlocked: ([x, y]) => x === 2 && y === 1,
       allowBlockedGoal: true,
     })).toEqual([[2, 1]]);
+  });
+
+  it('finds the nearest reachable qualified cell with a stable equal-distance preference', () => {
+    const result = nearestReachableCellPath({
+      width: 7,
+      height: 5,
+      start: [1, 2],
+      isBlocked: ([x, y]) => x === 2 && y > 0 && y < 4,
+      qualifies: ([x]) => x === 4,
+      compareEqualDistance: (a, b) => b[1] - a[1],
+    });
+
+    expect(result).toEqual({
+      goal: [4, 4],
+      path: [[1, 3], [1, 4], [2, 4], [3, 4], [4, 4]],
+    });
+  });
+
+  it('returns the start with an empty path when it already qualifies', () => {
+    expect(nearestReachableCellPath({
+      width: 3,
+      height: 3,
+      start: [1, 1],
+      isBlocked: () => false,
+      qualifies: ([x, y]) => x === 1 && y === 1,
+    })).toEqual({ goal: [1, 1], path: [] });
   });
 
   it('stops sight at intermediate blockers but not at the target', () => {

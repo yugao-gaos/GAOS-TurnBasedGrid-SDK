@@ -5,6 +5,10 @@ export const DEFAULT_OLLAMA_CLI_MODEL = 'qwen3.5';
 export interface CliAgentLaunchContext {
   mcpUrl: string;
   prompt: string;
+  /** Stable conversation id used to resume an interrupted CLI invocation. */
+  sessionId?: string;
+  /** Resume `sessionId` instead of creating a new conversation. */
+  resume?: boolean;
   /** MCP server name used in CLI configuration. Defaults to `game`. */
   serverName?: string;
   /** Tools permitted for CLIs that support an allowlist. */
@@ -24,6 +28,8 @@ export interface CliAgentSpec {
   launch(context: CliAgentLaunchContext): CliAgentLaunch;
   parseLine?(line: string): string[];
   login: string;
+  /** Whether this recipe can continue a previous conversation by session id. */
+  supportsResume?: boolean;
   status?: {
     argv: string[];
     ok(code: number, output: string): boolean;
@@ -145,6 +151,9 @@ function claudeLaunchArgs(
   const values = contextValues(context);
   return [
     '-p', context.prompt,
+    ...(context.resume && context.sessionId
+      ? ['--resume', context.sessionId]
+      : context.sessionId ? ['--session-id', context.sessionId] : []),
     ...(options.model ? ['--model', options.model] : []),
     '--mcp-config', JSON.stringify({
       mcpServers: { [values.serverName]: { type: 'http', url: context.mcpUrl } },
@@ -167,6 +176,7 @@ export function createBuiltinCliAgents(options: {
       id: 'claude',
       label: 'Claude Code',
       bin: 'claude',
+      supportsResume: true,
       launch: (context) => ({
         argv: claudeLaunchArgs(context, { model: options.claudeModel ?? DEFAULT_CLAUDE_CLI_MODEL }),
         files: {},
@@ -187,6 +197,7 @@ export function createBuiltinCliAgents(options: {
       id: 'ollama',
       label: 'Ollama + Claude Code',
       bin: 'ollama',
+      supportsResume: true,
       launch: (context) => ({
         argv: [
           'launch',

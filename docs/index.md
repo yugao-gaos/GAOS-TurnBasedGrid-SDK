@@ -2,9 +2,8 @@
 layout: home
 
 hero:
-  name: GAOS Turn-Based Grid Toolkit
-  text: Gaming AGI Open SDK
-  tagline: Games as benchmarks for human and AI agents.
+  name: Gaming AGI Open SDK
+  tagline: A turn-based grid toolkit for games as benchmarks for human and AI agents.
   actions:
     - theme: brand
       text: Start building
@@ -40,6 +39,16 @@ Product reducer + authored content
                          |
                  tools / drivers / CLIs
 ```
+
+## One agent turn
+
+| State | Legal actions | Agent chooses | Deterministic result |
+|---|---|---|---|
+| `position: 1`<br>`status: playing`<br>`actionsUsed: 1` | `{ id: 'advance' }`<br>`{ id: 'jump', index: 2 }` | `{ id: 'jump', index: 2 }` | `position: 3` → **won**<br>`reward: +3` · `totalReward: 3` · **3★** |
+
+`AgentEnvironment` exposes the product state and concrete legal actions,
+validates the agent's choice, applies the injected reducer once, and returns
+the scoring result with transcript-ready metrics.
 
 ## Built with GAOS
 
