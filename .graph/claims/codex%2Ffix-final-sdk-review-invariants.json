@@ -1,0 +1,9 @@
+{
+  "task_key": "codex/fix-final-sdk-review-invariants",
+  "git_user": "yugao-gaos <yu.gao@gaos.ca>",
+  "session_id": "codex-mcp-94415-bf27fa0517b809945b7bbb3076452172",
+  "branch": "orch/attempt/codex-fix-final-sdk-review-invariants",
+  "status": "claimed",
+  "claimed_at": "2026-07-22T21:00:54.290Z",
+  "lease_until": "2026-07-22T22:00:54.290Z"
+}
