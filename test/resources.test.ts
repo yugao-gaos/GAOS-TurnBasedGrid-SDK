@@ -22,6 +22,13 @@ describe('resource balances', () => {
     });
   });
 
+  it('rejects non-finite or out-of-bounds restored balances, including unknown keys', () => {
+    expect(() => initializeResourceBalances(resources, { energy: Number.NaN })).toThrow(TypeError);
+    expect(() => initializeResourceBalances(resources, { energy: 21 })).toThrow(RangeError);
+    expect(() => initializeResourceBalances(resources, { future: Number.POSITIVE_INFINITY }))
+      .toThrow(TypeError);
+  });
+
   it('applies multiple resources atomically with authored-order change records', () => {
     const balances = { energy: 10, coins: 2 };
     const plan = planResourceTransaction(resources, balances, {

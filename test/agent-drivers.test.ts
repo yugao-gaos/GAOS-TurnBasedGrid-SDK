@@ -152,6 +152,55 @@ describe('keyed providers', () => {
     await rejected;
   });
 
+  it('retries transient responses and bounds completed conversation history', async () => {
+    const ok = () => new Response(JSON.stringify({
+      choices: [{ message: { content: '{"action":{"id":"advance"}}' } }],
+    }), { status: 200 });
+    const request = vi.fn<AgentFetch>()
+      .mockResolvedValueOnce(new Response('busy', { status: 503 }))
+      .mockResolvedValue(ok())
+      .mockResolvedValueOnce(ok())
+      .mockResolvedValueOnce(ok());
+    const sleep = vi.fn(async () => undefined);
+    const driver = createKeyedAgentDriver<View>('openai', {
+      apiKey: 'secret-key', model: 'test-model', fetch: request,
+      maxHistoryTurns: 1, maxRetries: 2, retryBaseDelayMs: 5, sleep,
+    });
+    for (let step = 0; step < 3; step++) {
+      await driver.act({
+        observation: reducer.view(reducer.init({ goal: 2 }, 1)),
+        legalActions: [{ id: 'advance' }],
+        step,
+      });
+    }
+    expect(request).toHaveBeenCalledTimes(4);
+    expect(sleep).toHaveBeenCalledWith(5, expect.any(AbortSignal));
+    const lastBody = JSON.parse(request.mock.calls[3]![1]!.body as string) as {
+      messages: Array<{ role: string; content: string }>;
+    };
+    expect(lastBody.messages.map(({ role }) => role)).toEqual(['system', 'user', 'assistant', 'user']);
+    expect(lastBody.messages[1]?.content).toContain('"step":1');
+    expect(lastBody.messages[3]?.content).toContain('"step":2');
+  });
+
+  it('aborts while waiting to retry a transient response', async () => {
+    const sleep = vi.fn((_delay: number, signal: AbortSignal) => new Promise<void>((_resolve, reject) => {
+      signal.addEventListener('abort', () => reject(signal.reason), { once: true });
+    }));
+    const driver = createKeyedAgentDriver<View>('anthropic', {
+      apiKey: 'secret-key', model: 'test-model', maxRetries: 1,
+      fetch: async () => new Response('busy', { status: 429 }), sleep,
+    });
+    const pending = driver.act({
+      observation: reducer.view(reducer.init({ goal: 2 }, 1)),
+      legalActions: [{ id: 'advance' }],
+      step: 0,
+    });
+    await vi.waitFor(() => expect(sleep).toHaveBeenCalled());
+    expect(driver.interrupt?.()).toMatchObject({ interrupted: true });
+    await expect(pending).rejects.toThrow('agent interrupted');
+  });
+
   it('calls Anthropic Messages without requiring a provider SDK', async () => {
     const request = vi.fn<AgentFetch>().mockResolvedValue(new Response(JSON.stringify({
       content: [{ type: 'text', text: '{"action":{"id":"jump","index":2}}' }],

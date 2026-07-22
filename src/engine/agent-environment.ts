@@ -81,6 +81,8 @@ export interface AgentEnvironmentOptions<TLevel, TState, TView extends GridTurnV
     action: GridSubmittedAction,
     step: number,
   ) => number;
+  /** Snapshot level data for deterministic transcripts. Defaults to structuredClone. */
+  snapshotLevel?: (level: TLevel) => TLevel;
 }
 
 export interface AgentResetOptions<TLevel> {
@@ -123,6 +125,8 @@ export class AgentEnvironment<TLevel, TState, TView extends GridTurnView> {
   private ended = false;
   private terminationReason: AgentTerminationReason | null = null;
   private records: AgentTranscriptAction[] = [];
+  private transcriptLevel: TLevel | undefined;
+  private readonly snapshotLevel: (level: TLevel) => TLevel;
 
   constructor(private readonly options: AgentEnvironmentOptions<TLevel, TState, TView>) {
     this.level = options.level;
@@ -140,12 +144,20 @@ export class AgentEnvironment<TLevel, TState, TView extends GridTurnView> {
     this.rewardFor = options.reward ?? ((_previous, next) => (
       next.status === 'won' ? (next.stars ?? 1) : 0
     ));
+    this.snapshotLevel = options.snapshotLevel ?? ((level) => {
+      try {
+        return structuredClone(level);
+      } catch (error) {
+        throw new TypeError('level is not cloneable; provide AgentEnvironmentOptions.snapshotLevel', { cause: error });
+      }
+    });
   }
 
   reset(options: AgentResetOptions<TLevel> = {}): AgentTurn<TView> {
     if (options.level !== undefined) this.level = options.level;
     if (options.seed !== undefined) this.seed = options.seed;
     assertSeed(this.seed);
+    this.transcriptLevel = this.snapshotLevel(this.level);
     this.state = this.options.reducer.init(this.level, this.seed);
     this.steps = 0;
     this.totalReward = 0;
@@ -216,9 +228,12 @@ export class AgentEnvironment<TLevel, TState, TView extends GridTurnView> {
 
   transcript(): AgentTranscript<TLevel> {
     const turn = this.observe();
+    if (this.transcriptLevel === undefined) {
+      throw new AgentEnvironmentError('not_started', 'call reset() before transcript()');
+    }
     return {
       version: AGENT_TRANSCRIPT_VERSION,
-      level: this.level,
+      level: this.snapshotLevel(this.transcriptLevel),
       seed: this.seed,
       actions: this.records.map((record) => ({ ...record, action: { ...record.action } })),
       result: { ...turn.info },

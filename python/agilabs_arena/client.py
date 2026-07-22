@@ -7,10 +7,12 @@ plain request/response mapping so any harness (or curl) stays equivalent.
 from __future__ import annotations
 
 import json
+import math
 import re
 import time
 import urllib.error
 import urllib.request
+import urllib.parse
 import uuid
 from dataclasses import dataclass, field
 from typing import Any
@@ -23,14 +25,19 @@ PARTICIPANT_ID_PATTERN = r"^[A-Za-z0-9_.:@-]{1,128}$"
 _PARTICIPANT_ID_RE = re.compile(PARTICIPANT_ID_PATTERN)
 
 
+def _quote(value: str) -> str:
+    return urllib.parse.quote(value, safe="")
+
+
 class ArenaAPIError(Exception):
     """Non-2xx response from the API."""
 
-    def __init__(self, status: int, error: str, code: str | None = None):
+    def __init__(self, status: int, error: str, code: str | None = None, body: str | None = None):
         super().__init__(f"HTTP {status}: {error}")
         self.status = status
         self.error = error
         self.code = code
+        self.body = body
 
 
 class IllegalActionRejected(ArenaAPIError):
@@ -73,6 +80,19 @@ def parse_turn_result(data: Any) -> dict[str, Any]:
             or not _is_participant_list(awaiting)
         ):
             raise ProtocolMismatchError("pending participant lists missing")
+        if len(set(submitted)) != len(submitted) or len(set(awaiting)) != len(awaiting):
+            raise ProtocolMismatchError("pending participant lists must be unique")
+        if not awaiting:
+            raise ProtocolMismatchError("pending envelope must await a participant")
+        if set(submitted).intersection(awaiting):
+            raise ProtocolMismatchError("pending participant lists must be disjoint")
+        accepted = data.get("acceptedParticipantId")
+        if "acceptedParticipantId" in data and (
+            not isinstance(accepted, str)
+            or _PARTICIPANT_ID_RE.fullmatch(accepted) is None
+            or accepted not in submitted
+        ):
+            raise ProtocolMismatchError("pending acceptedParticipantId must be submitted")
     return data
 
 
@@ -149,9 +169,20 @@ class Turn:
 
 
 class ArenaClient:
-    def __init__(self, base_url: str = "http://localhost:8899", api_key: str | None = None):
+    def __init__(
+        self,
+        base_url: str = "http://localhost:8899",
+        api_key: str | None = None,
+        timeout: float | None = 30.0,
+    ):
+        if timeout is not None and (
+            isinstance(timeout, bool) or not isinstance(timeout, (int, float))
+            or not math.isfinite(timeout) or timeout <= 0
+        ):
+            raise ValueError("timeout must be a positive finite number or None")
         self.base_url = base_url.rstrip("/")
         self.api_key = api_key
+        self.timeout = timeout
         self._bindings: dict[str, dict[str, Any]] = {}
 
     def _remember(self, result: dict[str, Any], participant_id: str | None = None) -> None:
@@ -183,19 +214,20 @@ class ArenaClient:
             headers=headers,
         )
         try:
-            with urllib.request.urlopen(req) as resp:
+            with urllib.request.urlopen(req, timeout=self.timeout) as resp:
                 return json.loads(resp.read())
         except urllib.error.HTTPError as e:
+            raw_body = e.read().decode("utf-8", errors="replace")
             try:
-                payload = json.loads(e.read())
+                payload = json.loads(raw_body)
                 error = payload.get("error", str(e))
                 code = payload.get("code") if isinstance(payload.get("code"), str) else None
             except Exception:
-                error = str(e)
+                error = raw_body.strip() or str(e)
                 code = None
             if e.code == 422:
-                raise IllegalActionRejected(e.code, error, code) from None
-            raise ArenaAPIError(e.code, error, code) from None
+                raise IllegalActionRejected(e.code, error, code, raw_body) from None
+            raise ArenaAPIError(e.code, error, code, raw_body) from None
 
     def create_session(
         self,
@@ -236,7 +268,7 @@ class ArenaClient:
         return result["sessionId"], Turn.from_json(result["turn"])
 
     def get_turn_envelope(self, session_id: str) -> dict[str, Any]:
-        result = parse_turn_result(self._call("GET", f"/v1/sessions/{session_id}/turn"))
+        result = parse_turn_result(self._call("GET", f"/v1/sessions/{_quote(session_id)}/turn"))
         if result["sessionId"] != session_id:
             raise ProtocolMismatchError("response session does not match request")
         self._remember(result)
@@ -253,7 +285,7 @@ class ArenaClient:
         submission_id: str | None = None,
     ) -> dict[str, Any]:
         return self._submit_intent_to(
-            f"/v1/sessions/{session_id}/actions",
+            f"/v1/sessions/{_quote(session_id)}/actions",
             session_id,
             command,
             participant_id,
@@ -317,10 +349,10 @@ class ArenaClient:
         })
 
     def arena_queue_ticket(self, queue_id: str, ticket_id: str) -> dict[str, Any]:
-        return self._call("GET", f"/v1/arena/matchmaking/{queue_id}/{ticket_id}")
+        return self._call("GET", f"/v1/arena/matchmaking/{_quote(queue_id)}/{_quote(ticket_id)}")
 
     def cancel_arena_queue_ticket(self, queue_id: str, ticket_id: str) -> dict[str, Any]:
-        return self._call("DELETE", f"/v1/arena/matchmaking/{queue_id}/{ticket_id}")
+        return self._call("DELETE", f"/v1/arena/matchmaking/{_quote(queue_id)}/{_quote(ticket_id)}")
 
     def _parse_arena_room(self, data: Any, match_id: str) -> dict[str, Any]:
         if not isinstance(data, dict):
@@ -339,7 +371,7 @@ class ArenaClient:
     def get_arena_room(self, match_id: str) -> dict[str, Any]:
         """Read-only room snapshot; does not claim or heartbeat the seat."""
         return self._parse_arena_room(
-            self._call("GET", f"/v1/arena/matches/{match_id}"),
+            self._call("GET", f"/v1/arena/matches/{_quote(match_id)}"),
             match_id,
         )
 
@@ -347,7 +379,7 @@ class ArenaClient:
         return self._parse_arena_room(
             self._call(
                 "POST",
-                f"/v1/arena/matches/{match_id}/presence",
+                f"/v1/arena/matches/{_quote(match_id)}/presence",
                 {"connected": connected},
             ),
             match_id,
@@ -365,7 +397,7 @@ class ArenaClient:
 
     def get_arena_turn_envelope(self, match_id: str) -> dict[str, Any]:
         result = parse_turn_result(
-            self._call("GET", f"/v1/arena/matches/{match_id}/turn")
+            self._call("GET", f"/v1/arena/matches/{_quote(match_id)}/turn")
         )
         if result["sessionId"] != match_id:
             raise ProtocolMismatchError("response session does not match request")
@@ -402,7 +434,7 @@ class ArenaClient:
             raise ProtocolMismatchError("Arena controlRevision unavailable")
         participant = binding["participantId"]
         return self._submit_intent_to(
-            f"/v1/arena/matches/{match_id}/actions",
+            f"/v1/arena/matches/{_quote(match_id)}/actions",
             match_id,
             command,
             participant,
@@ -448,7 +480,7 @@ class ArenaClient:
 
     def submit_session(self, session_id: str, harness_category: str | None = None) -> dict:
         body = {"harnessCategory": harness_category} if harness_category else {}
-        return self._call("POST", f"/v1/sessions/{session_id}/submit", body)
+        return self._call("POST", f"/v1/sessions/{_quote(session_id)}/submit", body)
 
     def lab_level_versions(self) -> list[dict]:
         return self._call("GET", "/levels/lab/versions")  # type: ignore[return-value]
@@ -462,4 +494,4 @@ class ArenaClient:
         )
 
     def challenge_boards(self, game_id: str) -> dict:
-        return self._call("GET", f"/leaderboards/challenge/{game_id}")
+        return self._call("GET", f"/leaderboards/challenge/{_quote(game_id)}")

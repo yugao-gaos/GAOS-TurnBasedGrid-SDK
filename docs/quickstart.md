@@ -112,6 +112,7 @@ import { ArenaClient } from '@yugao-gaos/turn-based-grid-sdk';
 const arena = new ArenaClient(
   'https://api.zonoid.ai',
   process.env.ARENA_API_KEY,
+  { timeoutMs: 30_000 },
 );
 
 const session = await arena.createSession({
@@ -123,6 +124,12 @@ const session = await arena.createSession({
 const next = await arena.submitAction(session.sessionId, { id: 'Action 4' });
 console.log(next.grid);
 ```
+
+Requests time out after 30 seconds by default; set `timeoutMs: 0` to disable
+that bound. The third argument can also inject `fetch` or a shared
+`AbortSignal`. Dynamic path segments are URL-encoded, and API errors expose the
+HTTP status plus the raw `responseBody` when an upstream returns non-JSON
+diagnostics.
 
 ## Next steps
 

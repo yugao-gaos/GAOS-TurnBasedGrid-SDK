@@ -179,7 +179,9 @@ Use the hosted Arena client:
 ```ts
 import { ArenaClient } from '@yugao-gaos/turn-based-grid-sdk';
 
-const arena = new ArenaClient('https://api.zonoid.ai', process.env.ARENA_API_KEY);
+const arena = new ArenaClient('https://api.zonoid.ai', process.env.ARENA_API_KEY, {
+  timeoutMs: 30_000,
+});
 const session = await arena.createSession({
   gameMode: 'challenge',
   playMethod: 'human',
@@ -252,6 +254,8 @@ import {
 const driver = createKeyedAgentDriver('openai', {
   apiKey: process.env.OPENAI_API_KEY!,
   model: 'your-model-id',
+  maxHistoryTurns: 8,
+  maxRetries: 2,
 });
 const result = await runAgentDriverEpisode(environment, driver);
 ```
@@ -290,7 +294,7 @@ pip install gaos_turn_based_grid_sdk-0.11.0-py3-none-any.whl
 ```python
 from agilabs_arena import ArenaClient
 
-arena = ArenaClient("https://api.zonoid.ai", api_key="ak_...")
+arena = ArenaClient("https://api.zonoid.ai", api_key="ak_...", timeout=30.0)
 session_id, turn = arena.create_session(
     game_mode="challenge",
     play_method="human",

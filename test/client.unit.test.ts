@@ -72,6 +72,28 @@ describe('ArenaClient v1 protocol adapter', () => {
     })).toThrow(ProtocolMismatchError);
   });
 
+  it('rejects incoherent pending participant state without constraining opaque turn ids', () => {
+    const pending = {
+      ...turnEnvelope('s1', 0, TURN),
+      kind: 'pending',
+      turnId: 'opaque-turn-token',
+      submittedParticipants: ['north'],
+      awaitingParticipants: ['south'],
+      acceptedParticipantId: 'north',
+    };
+    expect(parseTurnResult(pending)).toMatchObject({ turnId: 'opaque-turn-token' });
+    expect(() => parseTurnResult({ ...pending, submittedParticipants: ['north', 'north'] }))
+      .toThrow('unique');
+    expect(() => parseTurnResult({ ...pending, awaitingParticipants: ['north'] }))
+      .toThrow('disjoint');
+    expect(() => parseTurnResult({ ...pending, awaitingParticipants: [] }))
+      .toThrow('must await');
+    expect(() => parseTurnResult({ ...pending, acceptedParticipantId: 'south' }))
+      .toThrow('must be submitted');
+    expect(() => parseTurnResult({ ...pending, acceptedParticipantId: null }))
+      .toThrow('must be submitted');
+  });
+
   it('sends the generic command envelope and polls pending turns once', async () => {
     const window = createIntentWindow('s1', 0, ['player', 'remote']);
     window.intents.player = {
@@ -131,6 +153,37 @@ describe('ArenaClient v1 protocol adapter', () => {
       status: 409,
       code: 'stale_turn',
     });
+  });
+
+  it('injects fetch, encodes path segments, and preserves non-JSON error bodies', async () => {
+    const request = vi.fn(async (_input: RequestInfo | URL, init?: RequestInit) => {
+      expect(init?.signal).toBeInstanceOf(AbortSignal);
+      return new Response('upstream unavailable', { status: 502, statusText: 'Bad Gateway' });
+    });
+    const client = new ArenaClient('https://example.test', undefined, {
+      fetch: request,
+      timeoutMs: 1_000,
+    });
+    await expect(client.getTurnEnvelope('room/with space')).rejects.toMatchObject({
+      status: 502,
+      error: 'upstream unavailable',
+      responseBody: 'upstream unavailable',
+    });
+    expect(request.mock.calls[0]?.[0]).toBe(
+      'https://example.test/v1/sessions/room%2Fwith%20space/turn',
+    );
+  });
+
+  it('applies a default request timeout and lets zero explicitly disable it', async () => {
+    const request = vi.fn(async (_input: RequestInfo | URL, _init?: RequestInit) =>
+      new Response(JSON.stringify(turnEnvelope('s1', 0, TURN))));
+    await new ArenaClient('https://example.test', undefined, { fetch: request })
+      .getTurnEnvelope('s1');
+    expect(request.mock.calls[0]?.[1]?.signal).toBeInstanceOf(AbortSignal);
+
+    await new ArenaClient('https://example.test', undefined, { fetch: request, timeoutMs: 0 })
+      .getTurnEnvelope('s1');
+    expect(request.mock.calls[1]?.[1]?.signal).toBeUndefined();
   });
 
   it('exposes the structured active ticket from a matchmaking conflict', async () => {

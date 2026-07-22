@@ -353,6 +353,22 @@ export function parseTurnResult<TObservation = unknown>(data: unknown): TurnResu
     ) {
       throw new ProtocolMismatchError('pending participant lists missing');
     }
+    const submitted = value['submittedParticipants'];
+    const awaiting = value['awaitingParticipants'];
+    if (awaiting.length === 0) {
+      throw new ProtocolMismatchError('pending envelope must await a participant');
+    }
+    if (new Set(submitted).size !== submitted.length || new Set(awaiting).size !== awaiting.length) {
+      throw new ProtocolMismatchError('pending participant lists must be unique');
+    }
+    if (submitted.some((participantId) => awaiting.includes(participantId))) {
+      throw new ProtocolMismatchError('pending participant lists must be disjoint');
+    }
+    const accepted = value['acceptedParticipantId'];
+    if (Object.hasOwn(value, 'acceptedParticipantId')
+      && (typeof accepted !== 'string' || !isParticipantId(accepted) || !submitted.includes(accepted))) {
+      throw new ProtocolMismatchError('pending acceptedParticipantId must be submitted');
+    }
   }
   return value as unknown as TurnResult<TObservation>;
 }
@@ -381,6 +397,7 @@ export class ArenaApiError extends Error {
     public error: string,
     public code?: string,
     public readonly details?: Readonly<Record<string, unknown>>,
+    public readonly responseBody?: string,
   ) {
     super(`HTTP ${status}: ${error}`);
     this.name = 'ArenaApiError';
@@ -395,8 +412,9 @@ export class IllegalActionRejected extends ArenaApiError {
     error: string,
     code?: string,
     details?: Readonly<Record<string, unknown>>,
+    responseBody?: string,
   ) {
-    super(status, error, code, details);
+    super(status, error, code, details, responseBody);
     this.name = 'IllegalActionRejected';
   }
 }
@@ -411,14 +429,30 @@ export type ApiKeyProvider =
   | string
   | (() => string | null | undefined | Promise<string | null | undefined>);
 
+export interface ArenaClientOptions {
+  /** Fetch implementation used for every request. Defaults to global fetch. */
+  fetch?: typeof fetch;
+  /** Request timeout in milliseconds. Defaults to 30,000; set to zero to disable. */
+  timeoutMs?: number;
+  /** Signal shared by every request made by this client. */
+  signal?: AbortSignal;
+}
+
 export class ArenaClient {
   private readonly bindings = new Map<string, SessionBinding>();
+  private readonly request: typeof fetch;
 
   constructor(
     private baseUrl = 'http://localhost:8899',
     private apiKey?: ApiKeyProvider,
+    private readonly options: ArenaClientOptions = {},
   ) {
     this.baseUrl = baseUrl.replace(/\/+$/, '');
+    this.request = options.fetch ?? fetch;
+    if (options.timeoutMs !== undefined
+      && (!Number.isSafeInteger(options.timeoutMs) || options.timeoutMs < 0)) {
+      throw new RangeError('timeoutMs must be a non-negative safe integer');
+    }
   }
 
   private remember<T>(result: TurnResult<T>, participantId?: string): SessionBinding {
@@ -465,24 +499,37 @@ export class ArenaClient {
 
   private async call<T>(method: string, path: string, body?: unknown): Promise<T> {
     const key = typeof this.apiKey === 'function' ? await this.apiKey() : this.apiKey;
-    const res = await fetch(this.baseUrl + path, {
+    const timeoutMs = this.options.timeoutMs ?? 30_000;
+    const timeout = timeoutMs > 0
+      ? AbortSignal.timeout(timeoutMs)
+      : undefined;
+    const signals = [this.options.signal, timeout].filter((signal): signal is AbortSignal => signal !== undefined);
+    const res = await this.request(this.baseUrl + path, {
       method,
       body: body === undefined ? undefined : JSON.stringify(body),
+      signal: signals.length > 1 ? AbortSignal.any(signals) : signals[0],
       headers: {
         'content-type': 'application/json',
         ...(key ? { authorization: `Bearer ${key}` } : {}),
       },
     });
-    const data = (await res.json()) as T & { error?: string; code?: string };
+    const responseBody = await res.text();
+    let data: (T & { error?: string; code?: string }) | undefined;
+    try {
+      data = responseBody ? JSON.parse(responseBody) as T & { error?: string; code?: string } : undefined;
+    } catch {
+      data = undefined;
+    }
     if (!res.ok) {
-      const message = data?.error ?? res.statusText;
+      const message = data?.error ?? (responseBody.trim() || res.statusText);
       const code = typeof data?.code === 'string' ? data.code : undefined;
       const details = data && typeof data === 'object'
         ? data as Readonly<Record<string, unknown>>
         : undefined;
-      if (res.status === 422) throw new IllegalActionRejected(res.status, message, code, details);
-      throw new ArenaApiError(res.status, message, code, details);
+      if (res.status === 422) throw new IllegalActionRejected(res.status, message, code, details, responseBody);
+      throw new ArenaApiError(res.status, message, code, details, responseBody);
     }
+    if (data === undefined) throw new ProtocolMismatchError(`HTTP ${res.status} response is not JSON`);
     return data;
   }
 
@@ -495,7 +542,7 @@ export class ArenaClient {
 
   async getTurnEnvelope(sessionId: string): Promise<TurnResult<Turn>> {
     const result = this.parse<Turn>(
-      await this.call('GET', `/v1/sessions/${sessionId}/turn`),
+      await this.call('GET', `/v1/sessions/${encodeURIComponent(sessionId)}/turn`),
       sessionId,
     );
     this.remember(result);
@@ -518,7 +565,7 @@ export class ArenaClient {
     } = {},
   ): Promise<TurnResult<TObservation>> {
     return this.submitIntentTo(
-      `/v1/sessions/${sessionId}/actions`,
+      `/v1/sessions/${encodeURIComponent(sessionId)}/actions`,
       sessionId,
       command,
       opts,
@@ -581,17 +628,17 @@ export class ArenaClient {
   }
 
   arenaQueueTicket(queueId: string, ticketId: string): Promise<ArenaQueueTicket> {
-    return this.call('GET', `/v1/arena/matchmaking/${queueId}/${ticketId}`);
+    return this.call('GET', `/v1/arena/matchmaking/${encodeURIComponent(queueId)}/${encodeURIComponent(ticketId)}`);
   }
 
   cancelArenaQueueTicket(queueId: string, ticketId: string): Promise<ArenaQueueTicket> {
-    return this.call('DELETE', `/v1/arena/matchmaking/${queueId}/${ticketId}`);
+    return this.call('DELETE', `/v1/arena/matchmaking/${encodeURIComponent(queueId)}/${encodeURIComponent(ticketId)}`);
   }
 
   /** Read-only room recovery snapshot; it does not claim or heartbeat a seat. */
   async getArenaRoom<TObservation = Turn>(matchId: string): Promise<ArenaRoom<TObservation>> {
     return this.parseArenaRoom<TObservation>(
-      await this.call('GET', `/v1/arena/matches/${matchId}`),
+      await this.call('GET', `/v1/arena/matches/${encodeURIComponent(matchId)}`),
       matchId,
     );
   }
@@ -601,7 +648,7 @@ export class ArenaClient {
     connected: boolean,
   ): Promise<ArenaRoom<TObservation>> {
     return this.parseArenaRoom<TObservation>(
-      await this.call('POST', `/v1/arena/matches/${matchId}/presence`, { connected }),
+      await this.call('POST', `/v1/arena/matches/${encodeURIComponent(matchId)}/presence`, { connected }),
       matchId,
     );
   }
@@ -623,7 +670,7 @@ export class ArenaClient {
     matchId: string,
   ): Promise<TurnResult<TObservation>> {
     const result = this.parse<TObservation>(
-      await this.call('GET', `/v1/arena/matches/${matchId}/turn`),
+      await this.call('GET', `/v1/arena/matches/${encodeURIComponent(matchId)}/turn`),
       matchId,
     );
     const binding = this.bindings.get(matchId);
@@ -652,7 +699,7 @@ export class ArenaClient {
     }
     const participantId = binding?.participantId ?? 'player';
     return this.submitIntentTo<TCommand, TObservation>(
-      `/v1/arena/matches/${matchId}/actions`,
+      `/v1/arena/matches/${encodeURIComponent(matchId)}/actions`,
       matchId,
       command,
       {
@@ -697,7 +744,7 @@ export class ArenaClient {
     sessionId: string,
     opts?: { harnessCategory?: 'llm-driven' | 'solver-assisted' },
   ): Promise<SubmitSummary> {
-    return this.call('POST', `/v1/sessions/${sessionId}/submit`, opts ?? {});
+    return this.call('POST', `/v1/sessions/${encodeURIComponent(sessionId)}/submit`, opts ?? {});
   }
 
   labLevelVersions(): Promise<Array<{ levelId: string; version: number }>> {
@@ -710,7 +757,7 @@ export class ArenaClient {
   }
 
   challengeBoards(gameId: string): Promise<{ paid: unknown[]; unpaid: unknown[] }> {
-    return this.call('GET', `/leaderboards/challenge/${gameId}`);
+    return this.call('GET', `/leaderboards/challenge/${encodeURIComponent(gameId)}`);
   }
 
   // ------------------------------------------------ agent API keys (JWT only)
@@ -727,6 +774,6 @@ export class ArenaClient {
 
   /** Revoke an agent key by id (owners only; admins can revoke any). */
   revokeKey(id: string): Promise<{ revoked: boolean }> {
-    return this.call('POST', `/keys/${id}/revoke`);
+    return this.call('POST', `/keys/${encodeURIComponent(id)}/revoke`);
   }
 }

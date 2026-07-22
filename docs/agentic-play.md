@@ -33,6 +33,10 @@ while (!turn.done) {
 const transcript = env.transcript();
 ```
 
+Levels are snapshotted with `structuredClone` when an episode resets so later
+caller mutations cannot rewrite its transcript. Products with non-cloneable
+level values can supply `snapshotLevel` in the environment options.
+
 Products may inject reward shaping and custom action enumeration. The default
 reward is terminal stars, or `1` for a win without stars. Reducer failure is a
 normal termination; reaching `maxSteps` is a safety truncation.
@@ -81,6 +85,8 @@ import {
 const driver = createKeyedAgentDriver('anthropic', {
   apiKey: process.env.ANTHROPIC_API_KEY!,
   model: 'your-model-id',
+  maxHistoryTurns: 8,
+  maxRetries: 2,
 });
 
 const registry = new AgentDriverRegistry([driver]);
@@ -95,6 +101,9 @@ Built-in keyed providers are Anthropic, OpenAI, xAI, and OpenRouter. The
 OpenAI-compatible driver also accepts a custom base URL and headers. Provider
 registries can add or replace definitions without changing the episode loop.
 Provider calls use `fetch`, so tests can inject an offline implementation.
+Completed conversation history is bounded (eight turns by default), and HTTP
+429/5xx responses receive two abortable exponential-backoff retries. Both
+limits and the delay implementation are configurable.
 
 Model responses are parsed into the same `GridSubmittedAction` contract and
 must exactly match a concrete legal action before the reducer sees them. API

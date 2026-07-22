@@ -116,6 +116,14 @@ export function initializeResourceBalances(
   saved: ResourceBalances = {},
 ): ResourceBalances {
   const balances: Record<string, number> = { ...saved };
+  for (const [id, balance] of Object.entries(balances)) {
+    assertFinite(balance, `saved resource ${id} balance`);
+    const definition = definitions[id];
+    if (definition && ((definition.min !== undefined && balance < definition.min)
+      || (definition.max !== undefined && balance > definition.max))) {
+      throw new RangeError(`saved resource ${id} balance must be within bounds`);
+    }
+  }
   for (const [id, definition] of Object.entries(definitions)) {
     if (!(id in balances)) balances[id] = definition.initial;
   }

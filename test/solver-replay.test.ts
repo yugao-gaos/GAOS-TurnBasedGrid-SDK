@@ -51,6 +51,22 @@ describe('generic grid solver', () => {
     expect(result).toMatchObject({ min: null, capped: false });
   });
 
+  it('returns a zero-length solution when the initial state is already won', () => {
+    const won: GridReducer<Level, State> = {
+      ...reducer,
+      init: () => ({ at: 3, actionsUsed: 0 }),
+    };
+    expect(solveGridLevel(won, { goal: 3 }, { maxActions: 0 })).toEqual({
+      min: 0, capped: false, explored: 1, actions: [],
+    });
+  });
+
+  it('rejects invalid search bounds', () => {
+    expect(() => solveGridLevel(reducer, { goal: 3 }, { maxActions: -1 })).toThrow(RangeError);
+    expect(() => solveGridLevel(reducer, { goal: 3 }, { maxActions: 1, maxNodes: 0 }))
+      .toThrow(RangeError);
+  });
+
   it('keeps action filtering in product policy', () => {
     const withRestart: GridReducer<Level, State> = {
       ...reducer,
