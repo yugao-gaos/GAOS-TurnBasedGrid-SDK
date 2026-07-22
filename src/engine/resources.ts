@@ -77,6 +77,15 @@ function assertFinite(value: number, label: string): void {
   if (!Number.isFinite(value)) throw new TypeError(`${label} must be finite`);
 }
 
+function assertRequirementAmount(amount: number): void {
+  assertFinite(amount, 'resource minimum amount');
+  if (amount < 0) throw new RangeError('resource minimum amount must not be negative');
+}
+
+function assertResourceDelta(delta: number): void {
+  assertFinite(delta, 'resource delta');
+}
+
 /** Validate and retain a typed, product-owned resource registry. */
 export function defineResources<const T extends Record<string, ResourceDefinition>>(
   definitions: T,
@@ -117,10 +126,12 @@ export function resourceAtLeast(
   resourceId: string,
   amount: number,
 ): ResourceMinimumRequirement {
+  assertRequirementAmount(amount);
   return { type: 'resource.minimum', resourceId, amount };
 }
 
 export function changeResource(resourceId: string, delta: number): ResourceDeltaEffect {
+  assertResourceDelta(delta);
   return { type: 'resource.delta', resourceId, delta };
 }
 
@@ -136,6 +147,7 @@ export function planResourceTransaction(
   const original = balances;
 
   for (const [index, requirement] of (transaction.requirements ?? []).entries()) {
+    assertRequirementAmount(requirement.amount);
     if (!(requirement.resourceId in definitions)) {
       return {
         ok: false,
@@ -169,6 +181,7 @@ export function planResourceTransaction(
   const next: Record<string, number> = { ...balances };
   const changes: ResourceChange[] = [];
   for (const [index, effect] of transaction.effects.entries()) {
+    assertResourceDelta(effect.delta);
     const definition = definitions[effect.resourceId];
     if (!definition) {
       return {

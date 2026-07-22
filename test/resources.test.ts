@@ -97,4 +97,30 @@ describe('resource balances', () => {
       code: 'resource_not_defined', resourceId: 'mana', phase: 'effect', index: 0,
     });
   });
+
+  it.each([
+    { amount: -1, error: RangeError },
+    { amount: Number.NaN, error: TypeError },
+    { amount: Number.POSITIVE_INFINITY, error: TypeError },
+    { amount: Number.NEGATIVE_INFINITY, error: TypeError },
+  ])('rejects invalid minimum $amount at factory and plan boundaries', ({ amount, error }) => {
+    expect(() => resourceAtLeast('energy', amount)).toThrow(error);
+    expect(() => planResourceTransaction(resources, { energy: 10 }, {
+      id: 'raw_requirement',
+      requirements: [{ type: 'resource.minimum', resourceId: 'energy', amount }],
+      effects: [],
+    })).toThrow(error);
+  });
+
+  it.each([
+    Number.NaN,
+    Number.POSITIVE_INFINITY,
+    Number.NEGATIVE_INFINITY,
+  ])('rejects invalid delta %s at factory and plan boundaries', (delta) => {
+    expect(() => changeResource('energy', delta)).toThrow(TypeError);
+    expect(() => planResourceTransaction(resources, { energy: 10 }, {
+      id: 'raw_delta',
+      effects: [{ type: 'resource.delta', resourceId: 'energy', delta }],
+    })).toThrow(TypeError);
+  });
 });

@@ -41,6 +41,11 @@ returns a structured failure, the original balances, and no partial changes.
 Successful change records are deterministic and can be published as product
 events after commit.
 
+Minimum requirement amounts must be finite and non-negative; resource deltas
+must be finite. The factories and planner both throw for invalid authored data,
+including raw transaction objects, while ordinary insufficient-resource and
+bound failures remain structured transaction results.
+
 AI action limits are separate runtime guardrails. Use
 `aiActionLimitExceeded({ actionsUsed, maxActions })` regardless of which, if
 any, product resources an AI action consumes.
