@@ -109,9 +109,9 @@ inspect actions, and exposes a redacted `TurnView`; the same adapter is used by
 human play, agents, the solver, and replay verification.
 
 <figure class="mechanism-video">
-  <video controls muted playsinline preload="metadata" poster="/mechanisms/simultaneous-movement-centered-poster.jpg" aria-label="Focused Zonoid grid model demo board recording">
-    <source src="/mechanisms/simultaneous-movement-centered.mp4" type="video/mp4">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/grid-model-poster.jpg" aria-label="Focused Zonoid grid model demo board recording">
+    <source src="/mechanisms/grid-model.mp4" type="video/mp4">
     Your browser does not support embedded video.
   </video>
-  <figcaption>Focused Zonoid demo board: the grid model places the player, multiple rivals, walls, and destinations on discrete cells.</figcaption>
+  <figcaption>Focused Zonoid demo board: a simple room shows the discrete grid, its walls, and the player occupying one cell.</figcaption>
 </figure>

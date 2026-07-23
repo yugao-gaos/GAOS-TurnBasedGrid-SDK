@@ -82,9 +82,9 @@ as fired events, delivered objects, and dialogue evidence stays in the injected
 reducer and its state key.
 
 <figure class="mechanism-video">
-  <video controls muted playsinline preload="metadata" poster="/mechanisms/push-solver-scoring-centered-poster.jpg" aria-label="Focused Zonoid solver demo board recording">
-    <source src="/mechanisms/push-solver-scoring-centered.mp4" type="video/mp4">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/solver-poster.jpg" aria-label="Focused Zonoid solver demo board recording">
+    <source src="/mechanisms/solver.mp4" type="video/mp4">
     Your browser does not support embedded video.
   </video>
-  <figcaption>Focused Zonoid demo board: the solver finds and replays the short push sequence that reaches the objective.</figcaption>
+  <figcaption>Focused Zonoid demo board: the solver finds and replays a multi-step box-and-conveyor route to the objective.</figcaption>
 </figure>

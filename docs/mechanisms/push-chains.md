@@ -87,9 +87,9 @@ the SDK plans the entire chain first, then commits farthest-to-nearest so a
 failed chain leaves every object in place.
 
 <figure class="mechanism-video">
-  <video controls muted playsinline preload="metadata" poster="/mechanisms/push-solver-scoring-centered-poster.jpg" aria-label="Focused Zonoid push chain demo board recording">
-    <source src="/mechanisms/push-solver-scoring-centered.mp4" type="video/mp4">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/push-chains-poster.jpg" aria-label="Focused Zonoid push chain demo board recording">
+    <source src="/mechanisms/push-chains.mp4" type="video/mp4">
     Your browser does not support embedded video.
   </video>
-  <figcaption>Focused Zonoid demo board: the box push is planned and committed as one all-or-nothing displacement.</figcaption>
+  <figcaption>Focused Zonoid demo board: the player pushes a box, and that box pushes a Relic so the full chain commits atomically.</figcaption>
 </figure>

@@ -59,9 +59,9 @@ as opening a wall or unlocking an exit; the SDK latches the event before its
 effects, so replay and nested settlement cannot fire it twice.
 
 <figure class="mechanism-video">
-  <video controls muted playsinline preload="metadata" poster="/mechanisms/projectile-resource-use-centered-poster.jpg" aria-label="Focused Zonoid trigger demo board recording">
-    <source src="/mechanisms/projectile-resource-use-centered.mp4" type="video/mp4">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/triggers-poster.jpg" aria-label="Focused Zonoid trigger demo board recording">
+    <source src="/mechanisms/triggers.mp4" type="video/mp4">
     Your browser does not support embedded video.
   </video>
-  <figcaption>Focused Zonoid demo board: the projectile’s resolved use activates the board trigger exactly once.</figcaption>
+  <figcaption>Focused Zonoid demo board: the player steps on a switch, firing its one-shot trigger and opening the linked door.</figcaption>
 </figure>

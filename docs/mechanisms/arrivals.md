@@ -69,9 +69,9 @@ or plug interaction. The SDK orders those rules; Zonoid decides which token is
 consumed, which objective changes, and which visual event is emitted.
 
 <figure class="mechanism-video">
-  <video controls muted playsinline preload="metadata" poster="/mechanisms/simultaneous-movement-centered-poster.jpg" aria-label="Focused Zonoid arrivals demo board recording">
-    <source src="/mechanisms/simultaneous-movement-centered.mp4" type="video/mp4">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/arrivals-poster.jpg" aria-label="Focused Zonoid arrivals demo board recording">
+    <source src="/mechanisms/arrivals.mp4" type="video/mp4">
     Your browser does not support embedded video.
   </video>
-  <figcaption>Focused Zonoid demo board: arrival handling runs after the simultaneous moves commit to their destination cells.</figcaption>
+  <figcaption>Focused Zonoid demo board: the player picks up a Relic, then reaches the exit so each cell-entry effect resolves after movement.</figcaption>
 </figure>

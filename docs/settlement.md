@@ -189,9 +189,9 @@ resource work. The platform supplies those jobs and policies; the SDK keeps
 ordering, deduplication, and the authored safety bound deterministic.
 
 <figure class="mechanism-video">
-  <video controls muted playsinline preload="metadata" poster="/mechanisms/push-solver-scoring-centered-poster.jpg" aria-label="Focused Zonoid bounded settlement demo board recording">
-    <source src="/mechanisms/push-solver-scoring-centered.mp4" type="video/mp4">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/push-chains-poster.jpg" aria-label="Focused Zonoid bounded settlement demo board recording">
+    <source src="/mechanisms/push-chains.mp4" type="video/mp4">
     Your browser does not support embedded video.
   </video>
-  <figcaption>Focused Zonoid demo board: the push and objective arrival settle in one bounded deterministic turn pipeline.</figcaption>
+  <figcaption>Focused Zonoid demo board: a player, box, and Relic push chain settles in one bounded deterministic turn pipeline.</figcaption>
 </figure>

@@ -66,9 +66,9 @@ attempt, subject, effect, and per-subject counter so junk actions cannot shift
 the result stream.
 
 <figure class="mechanism-video">
-  <video controls muted playsinline preload="metadata" poster="/mechanisms/rays-chain-reactions-centered-poster.jpg" aria-label="Focused Zonoid deterministic randomness demo board recording">
-    <source src="/mechanisms/rays-chain-reactions-centered.mp4" type="video/mp4">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/randomness-poster.jpg" aria-label="Focused Zonoid deterministic randomness and detection risk demo board recording">
+    <source src="/mechanisms/randomness.mp4" type="video/mp4">
     Your browser does not support embedded video.
   </video>
-  <figcaption>Focused Zonoid demo board: the same seed and action reproduce the same beam-effect outcome.</figcaption>
+  <figcaption>Focused Zonoid demo board: Look reveals authored detection risk—high in the open sentry room and lower behind boxes—while seeded rolls remain replayable.</figcaption>
 </figure>
