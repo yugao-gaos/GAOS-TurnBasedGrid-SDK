@@ -59,9 +59,9 @@ as opening a wall or unlocking an exit; the SDK latches the event before its
 effects, so replay and nested settlement cannot fire it twice.
 
 <figure class="mechanism-video">
-  <video controls muted playsinline preload="metadata" poster="/mechanisms/projectile-use-poster.jpg" aria-label="Zonoid OU-L1 gameplay recording">
-    <source src="/mechanisms/projectile-use.mp4" type="video/mp4">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/projectile-resource-use-poster.jpg" aria-label="Focused Zonoid trigger demo board recording">
+    <source src="/mechanisms/projectile-resource-use.mp4" type="video/mp4">
     Your browser does not support embedded video.
   </video>
-  <figcaption>Zonoid OU-L1: the authored board event rewrites product state once its play condition becomes true and remains latched on replay.</figcaption>
+  <figcaption>Focused Zonoid demo board: the projectile’s resolved use activates the board trigger exactly once.</figcaption>
 </figure>

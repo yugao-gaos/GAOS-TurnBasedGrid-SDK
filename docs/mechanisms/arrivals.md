@@ -69,9 +69,9 @@ or plug interaction. The SDK orders those rules; Zonoid decides which token is
 consumed, which objective changes, and which visual event is emitted.
 
 <figure class="mechanism-video">
-  <video controls muted playsinline preload="metadata" poster="/mechanisms/movement-arrival-poster.jpg" aria-label="Zonoid OD-L1 gameplay recording">
-    <source src="/mechanisms/movement-arrival.mp4" type="video/mp4">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/simultaneous-movement-poster.jpg" aria-label="Focused Zonoid arrivals demo board recording">
+    <source src="/mechanisms/simultaneous-movement.mp4" type="video/mp4">
     Your browser does not support embedded video.
   </video>
-  <figcaption>Zonoid OD-L1: movement commits first, then the Relic pickup and exit arrival update the product state.</figcaption>
+  <figcaption>Focused Zonoid demo board: arrival handling runs after the simultaneous moves commit to their destination cells.</figcaption>
 </figure>

@@ -59,9 +59,9 @@ the transaction atomically; Zonoid owns Energy capacity, refunds, display, and
 which level actions cost energy.
 
 <figure class="mechanism-video">
-  <video controls muted playsinline preload="metadata" poster="/mechanisms/projectile-use-poster.jpg" aria-label="Zonoid OU-L1 gameplay recording">
-    <source src="/mechanisms/projectile-use.mp4" type="video/mp4">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/projectile-resource-use-poster.jpg" aria-label="Focused Zonoid resource use demo board recording">
+    <source src="/mechanisms/projectile-resource-use.mp4" type="video/mp4">
     Your browser does not support embedded video.
   </video>
-  <figcaption>Zonoid OU-L1: every committed move and Use action updates the product's Energy ledger atomically.</figcaption>
+  <figcaption>Focused Zonoid demo board: firing the projectile consumes the displayed resource as one atomic action.</figcaption>
 </figure>

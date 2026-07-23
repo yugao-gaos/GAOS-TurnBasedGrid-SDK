@@ -71,9 +71,9 @@ The SDK guarantees breadth-first ordering and once-per-identity activation;
 Zonoid supplies shields, immunity, damage, and presentation events.
 
 <figure class="mechanism-video">
-  <video controls muted playsinline preload="metadata" poster="/mechanisms/laser-combat-poster.jpg" aria-label="Zonoid TB-L1 gameplay recording">
-    <source src="/mechanisms/laser-combat.mp4" type="video/mp4">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/rays-chain-reactions-poster.jpg" aria-label="Focused Zonoid chain reaction demo board recording">
+    <source src="/mechanisms/rays-chain-reactions.mp4" type="video/mp4">
     Your browser does not support embedded video.
   </video>
-  <figcaption>Zonoid TB-L1: laser effects settle through the combat cascade while product damage and shield policy remain visible in the HUD.</figcaption>
+  <figcaption>Focused Zonoid demo board: one beam impact starts the visible, deterministically ordered effect cascade.</figcaption>
 </figure>

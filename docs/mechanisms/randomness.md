@@ -66,9 +66,9 @@ attempt, subject, effect, and per-subject counter so junk actions cannot shift
 the result stream.
 
 <figure class="mechanism-video">
-  <video controls muted playsinline preload="metadata" poster="/mechanisms/laser-combat-poster.jpg" aria-label="Zonoid TB-L1 gameplay recording">
-    <source src="/mechanisms/laser-combat.mp4" type="video/mp4">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/rays-chain-reactions-poster.jpg" aria-label="Focused Zonoid deterministic randomness demo board recording">
+    <source src="/mechanisms/rays-chain-reactions.mp4" type="video/mp4">
     Your browser does not support embedded video.
   </video>
-  <figcaption>Zonoid TB-L1: this recorded run is reproducible from the same board, seed, and canonical action sequence; stochastic character effects use event-keyed draws.</figcaption>
+  <figcaption>Focused Zonoid demo board: the same seed and action reproduce the same beam-effect outcome.</figcaption>
 </figure>

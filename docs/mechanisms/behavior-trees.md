@@ -68,9 +68,9 @@ world and returns a product order; the universal reducer then resolves all NPC
 orders together with the player’s action.
 
 <figure class="mechanism-video">
-  <video controls muted playsinline preload="metadata" poster="/mechanisms/npc-cooperation-poster.jpg" aria-label="Zonoid SL-L1 gameplay recording">
-    <source src="/mechanisms/npc-cooperation.mp4" type="video/mp4">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/npc-cooperation-resource-claim-poster.jpg" aria-label="Focused Zonoid NPC behavior tree demo board recording">
+    <source src="/mechanisms/npc-cooperation-resource-claim.mp4" type="video/mp4">
     Your browser does not support embedded video.
   </video>
-  <figcaption>Zonoid SL-L1: the authored helper behavior turns dialogue instructions into deterministic NPC movement.</figcaption>
+  <figcaption>Focused Zonoid demo board: the helper NPC’s behavior tree chooses its deterministic cooperative move.</figcaption>
 </figure>
