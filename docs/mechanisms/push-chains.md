@@ -77,3 +77,11 @@ The product owns push eligibility, weight, strength, terrain, destination
 transforms, simultaneous skip qualification, sounds, animation, and consequences.
 The SDK owns linear traversal, all-or-nothing planning, metadata carriage, and
 commit order.
+
+## Zonoid example
+
+In Zonoid’s Object Delivery and Object Usage levels, the player can push boxes
+and other solid objects through a line of occupants. The platform’s receiver
+policy decides which shapes are pushable and whether the destination is free;
+the SDK plans the entire chain first, then commits farthest-to-nearest so a
+failed chain leaves every object in place.

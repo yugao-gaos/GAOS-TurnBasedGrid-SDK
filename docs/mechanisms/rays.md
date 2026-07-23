@@ -55,3 +55,10 @@ Use [geometry and FOV](geometry.md) to construct a discrete path. The ray helper
 then owns ordered visiting and explicit termination, while the product owns
 blockers, piercing, reflection, damage, mutation, and events.
 
+## Zonoid example
+
+Zonoid’s laser and sentry abilities build ordered paths from the platform’s
+board geometry, then call `traverseGridRay`. Walls and half-walls stop the ray;
+the first eligible unit can receive damage, and shield or friendly-ray policy
+is applied by Zonoid at the stop cell. The SDK provides the stable traversal
+and distinguishes a hit from an exhausted path.

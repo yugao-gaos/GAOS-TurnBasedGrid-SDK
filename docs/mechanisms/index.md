@@ -5,6 +5,11 @@ blocks for turn-based grid games. Each page in this section describes one
 mechanism family: the state it expects, the ordering it guarantees, the policy
 the product must inject, and the edge cases an integration should test.
 
+Every mechanism page also ends with a **Zonoid example**. Zonoid is the first
+production consumer of this engine: its universal grid reducer supplies the
+board, characters, abilities, authored levels, and presentation policy while
+the SDK supplies the deterministic algorithm.
+
 ## How the pieces fit together
 
 ```text

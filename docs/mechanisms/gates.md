@@ -56,3 +56,10 @@ cells, crushing, pathfinding updates, sounds, or animation. It returns the next
 abstract state plus `changed` and a nullable transition so products can commit
 and present the result exactly once.
 
+## Zonoid example
+
+Zonoid maps switches and powered plugs to two gate modes. A weighted switch or
+plug can latch a door open permanently, while an automatic door closes after
+its source turns off only when no actor occupies the doorway. The platform
+computes linked activation and occupancy, then uses this SDK transition to
+update the door and emit one `opened` or `closed` event.

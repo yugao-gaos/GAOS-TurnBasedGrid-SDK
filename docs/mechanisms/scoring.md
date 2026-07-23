@@ -77,3 +77,12 @@ Changing authored thresholds does not require changing the SDK engine.
 - Define whether rejected/no-op actions consume budget.
 - Apply costs and terminal checks at one documented phase.
 - Store thresholds and caps with the level version used by replay.
+
+## Zonoid example
+
+Zonoid stores per-level suggested-action thresholds and calls `scoreStars` only
+after the universal reducer has settled a winning turn. Story and Challenge
+levels therefore share the same 1–3 star calculation, while Energy capacity
+and autonomous action limits remain product policy and are checked separately.
+Zonoid uses solver measurements as authoring input, then tunes thresholds with
+human and agent play.

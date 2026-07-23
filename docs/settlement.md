@@ -179,3 +179,11 @@ revalidate, and seed them on the next turn.
   independently bounded.
 - Prefer `defer` when a rule is intentionally next-turn behavior, rather than
   encoding turn delay as an artificial same-turn wave.
+
+## Zonoid example
+
+Zonoid uses settlement as the universal reducer’s same-turn worklist. A
+committed move can enqueue arrivals, a switch can update a gate, a belt can
+create another movement pass, and a laser or pickup can enqueue damage or
+resource work. The platform supplies those jobs and policies; the SDK keeps
+ordering, deduplication, and the authored safety bound deterministic.

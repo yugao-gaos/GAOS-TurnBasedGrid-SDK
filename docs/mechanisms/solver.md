@@ -72,3 +72,11 @@ The solver proves minimum action count only for the reducer version, seed,
 available actions, filters, and state key used in that run. Record those inputs
 when using results to author [star thresholds](scoring.md).
 
+## Zonoid example
+
+Zonoid runs `solveGridLevel` against the same universal reducer used in play
+when validating authored boards. The solver enumerates canonical movement,
+Use, Talk, Inspect, and targeted actions, finds a minimum-action winning route,
+and supplies a baseline for three- and two-star thresholds. Product state such
+as fired events, delivered objects, and dialogue evidence stays in the injected
+reducer and its state key.

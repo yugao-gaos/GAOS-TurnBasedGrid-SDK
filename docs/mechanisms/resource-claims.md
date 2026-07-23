@@ -62,3 +62,10 @@ fail, bounce, wait, refund, or enqueue a different effect. If the design needs
 initiative or random winner selection, implement that policy outside this
 neutral helper and record the chosen result in deterministic state or transcript.
 
+## Zonoid example
+
+Zonoid qualifies pickups, throws, landings, bat flights, and overlapping
+effects against one pre-commit world snapshot. If two independent intents claim
+the same Relic, destination, or flight cell, the platform passes both claims to
+the SDK and accepts neither. This keeps simultaneous turns fair; Zonoid then
+emits the appropriate bounce, collision, or no-op event.

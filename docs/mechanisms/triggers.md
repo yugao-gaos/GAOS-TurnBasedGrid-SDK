@@ -49,3 +49,11 @@ Conditions, effects, trigger reset policy, scopes, spawning, dialogue, rewards,
 and visual events remain product-owned. When effects cause more same-turn work,
 enqueue it through [turn settlement](/settlement) instead of recursively
 calling the entire trigger pass.
+
+## Zonoid example
+
+Zonoid levels can author one-shot board events such as “switch pressed,” “plug
+powered,” “agent reached this cell,” “evidence collected,” or “turn reached.”
+The platform evaluates those conditions and applies feature-cell rewrites such
+as opening a wall or unlocking an exit; the SDK latches the event before its
+effects, so replay and nested settlement cannot fire it twice.

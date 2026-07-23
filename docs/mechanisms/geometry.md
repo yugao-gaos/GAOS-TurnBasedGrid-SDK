@@ -91,3 +91,10 @@ it with product-owned memory.
 - Normalize dynamic occupancy to the same turn snapshot used by movement.
 - Treat all coordinates and board dimensions as integers at the input boundary.
 
+## Zonoid example
+
+Zonoid uses shortest paths for NPC orders and nearest reachable cells for
+targeted commands. Its FOV adapter supplies walls, doors, half-walls, actors,
+facing, and range to the geometry helpers; the resulting cells are then used
+for Inspect visibility, guard sight, and agent observations. The SDK computes
+the geometry, while Zonoid owns fog, disguise state, and what is redacted.

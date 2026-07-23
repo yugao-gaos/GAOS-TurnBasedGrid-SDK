@@ -59,3 +59,11 @@ nested reducer call.
 
 The returned id list is useful for tests and traces, but product state and
 events remain the authoritative effect results.
+
+## Zonoid example
+
+Zonoid uses arrival dispatch after movement, throws, bat flights, and conveyor
+passes. The platform registers rules for picking up a Relic or battery, landing
+on a matching shape exit, entering an objective cell, and resolving a battery
+or plug interaction. The SDK orders those rules; Zonoid decides which token is
+consumed, which objective changes, and which visual event is emitted.
