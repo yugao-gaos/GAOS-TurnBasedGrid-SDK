@@ -64,8 +64,8 @@ is applied by Zonoid at the stop cell. The SDK provides the stable traversal
 and distinguishes a hit from an exhausted path.
 
 <figure class="mechanism-video">
-  <video controls muted playsinline preload="metadata" poster="/mechanisms/rays-chain-reactions-board-only-poster.jpg" aria-label="Focused Zonoid ray traversal demo board recording">
-    <source src="/mechanisms/rays-chain-reactions-board-only.mp4" type="video/mp4">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/rays-chain-reactions-centered-poster.jpg" aria-label="Focused Zonoid ray traversal demo board recording">
+    <source src="/mechanisms/rays-chain-reactions-centered.mp4" type="video/mp4">
     Your browser does not support embedded video.
   </video>
   <figcaption>Focused Zonoid demo board: the beam visits grid cells in order until the first blocking target.</figcaption>
