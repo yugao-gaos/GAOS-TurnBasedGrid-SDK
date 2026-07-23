@@ -72,5 +72,5 @@ orders together with the player’s action.
     <source src="/mechanisms/behavior-trees.mp4" type="video/mp4">
     Your browser does not support embedded video.
   </video>
-  <figcaption>Focused Zonoid demo board: an NPC behavior tree selects and executes its deterministic authored action.</figcaption>
+  <figcaption>Focused Zonoid demo board: a guard patrols while the player is hidden, then attacks after the player enters its line of sight.</figcaption>
 </figure>

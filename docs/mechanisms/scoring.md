@@ -92,5 +92,5 @@ human and agent play.
     <source src="/mechanisms/scoring.mp4" type="video/mp4">
     Your browser does not support embedded video.
   </video>
-  <figcaption>Focused Zonoid demo board: completing the objective turns the recorded action count into a deterministic score.</figcaption>
+  <figcaption>Focused Zonoid demo board: completing the objective within six actions visibly holds the deterministic final 3 / 3-star score.</figcaption>
 </figure>

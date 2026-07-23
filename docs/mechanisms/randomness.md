@@ -70,5 +70,5 @@ the result stream.
     <source src="/mechanisms/randomness.mp4" type="video/mp4">
     Your browser does not support embedded video.
   </video>
-  <figcaption>Focused Zonoid demo board: Look reveals authored detection risk—high in the open sentry room and lower behind boxes—while seeded rolls remain replayable.</figcaption>
+  <figcaption>Focused Zonoid demo board: Look reveals labeled 100%, 35%, and 15% detection-risk cells while the seeded outcome remains replayable.</figcaption>
 </figure>
