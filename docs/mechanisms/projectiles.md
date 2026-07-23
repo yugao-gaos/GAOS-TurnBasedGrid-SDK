@@ -90,8 +90,8 @@ unit. The SDK performs snapshot-safe passes; Zonoid applies the resulting
 pickup, damage, relay, and visual events.
 
 <figure class="mechanism-video">
-  <video controls muted playsinline preload="metadata" poster="/mechanisms/projectile-resource-use-board-only-poster.jpg" aria-label="Focused Zonoid projectile demo board recording">
-    <source src="/mechanisms/projectile-resource-use-board-only.mp4" type="video/mp4">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/projectile-resource-use-centered-poster.jpg" aria-label="Focused Zonoid projectile demo board recording">
+    <source src="/mechanisms/projectile-resource-use-centered.mp4" type="video/mp4">
     Your browser does not support embedded video.
   </video>
   <figcaption>Focused Zonoid demo board: one projectile travels cell by cell from the player toward the selected target.</figcaption>

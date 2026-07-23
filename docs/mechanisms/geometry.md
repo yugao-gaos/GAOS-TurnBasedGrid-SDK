@@ -100,8 +100,8 @@ for Inspect visibility, guard sight, and agent observations. The SDK computes
 the geometry, while Zonoid owns fog, disguise state, and what is redacted.
 
 <figure class="mechanism-video">
-  <video controls muted playsinline preload="metadata" poster="/mechanisms/rays-chain-reactions-board-only-poster.jpg" aria-label="Focused Zonoid grid geometry demo board recording">
-    <source src="/mechanisms/rays-chain-reactions-board-only.mp4" type="video/mp4">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/rays-chain-reactions-centered-poster.jpg" aria-label="Focused Zonoid grid geometry demo board recording">
+    <source src="/mechanisms/rays-chain-reactions-centered.mp4" type="video/mp4">
     Your browser does not support embedded video.
   </video>
   <figcaption>Focused Zonoid demo board: the straight beam exposes ordered grid traversal and wall blocking geometry.</figcaption>
