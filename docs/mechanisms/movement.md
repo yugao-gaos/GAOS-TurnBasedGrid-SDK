@@ -93,3 +93,11 @@ into one movement snapshot. The platform validates each action and supplies
 walls, doors, footprints, and priorities; the SDK resolves the batch so an
 actor cannot win by arriving earlier in an iteration. Positions are committed
 before Zonoid runs pickups, doors, damage, and other arrivals.
+
+<figure class="mechanism-video">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/movement-arrival-poster.jpg" aria-label="Zonoid OD-L1 gameplay recording">
+    <source src="/mechanisms/movement-arrival.mp4" type="video/mp4">
+    Your browser does not support embedded video.
+  </video>
+  <figcaption>Zonoid OD-L1: each submitted move resolves against walls, occupants, and the committed turn snapshot.</figcaption>
+</figure>

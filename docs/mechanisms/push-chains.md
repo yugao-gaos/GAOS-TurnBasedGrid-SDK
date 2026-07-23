@@ -85,3 +85,11 @@ and other solid objects through a line of occupants. The platform’s receiver
 policy decides which shapes are pushable and whether the destination is free;
 the SDK plans the entire chain first, then commits farthest-to-nearest so a
 failed chain leaves every object in place.
+
+<figure class="mechanism-video">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/push-transport-poster.jpg" aria-label="Zonoid OD-L4 gameplay recording">
+    <source src="/mechanisms/push-transport.mp4" type="video/mp4">
+    Your browser does not support embedded video.
+  </video>
+  <figcaption>Zonoid OD-L4: box displacement is planned as an all-or-nothing chain before positions and arrivals commit.</figcaption>
+</figure>

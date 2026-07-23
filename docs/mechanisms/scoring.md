@@ -86,3 +86,11 @@ levels therefore share the same 1–3 star calculation, while Energy capacity
 and autonomous action limits remain product policy and are checked separately.
 Zonoid uses solver measurements as authoring input, then tunes thresholds with
 human and agent play.
+
+<figure class="mechanism-video">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/movement-arrival-poster.jpg" aria-label="Zonoid OD-L1 gameplay recording">
+    <source src="/mechanisms/movement-arrival.mp4" type="video/mp4">
+    Your browser does not support embedded video.
+  </video>
+  <figcaption>Zonoid OD-L1: the terminal result derives its star rating from the completed run's canonical action count.</figcaption>
+</figure>

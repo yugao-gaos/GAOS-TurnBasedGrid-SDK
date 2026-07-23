@@ -62,3 +62,11 @@ board geometry, then call `traverseGridRay`. Walls and half-walls stop the ray;
 the first eligible unit can receive damage, and shield or friendly-ray policy
 is applied by Zonoid at the stop cell. The SDK provides the stable traversal
 and distinguishes a hit from an exhausted path.
+
+<figure class="mechanism-video">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/laser-combat-poster.jpg" aria-label="Zonoid TB-L1 gameplay recording">
+    <source src="/mechanisms/laser-combat.mp4" type="video/mp4">
+    Your browser does not support embedded video.
+  </video>
+  <figcaption>Zonoid TB-L1: the laser targeting preview and fired beam follow the SDK's ordered grid-ray traversal.</figcaption>
+</figure>

@@ -107,3 +107,11 @@ Usage, Signal Language, The Breach, Intelligence Lies, and Jailbreak Protocol.
 The reducer initializes a product `World`, applies the canonical move/use/talk/
 inspect actions, and exposes a redacted `TurnView`; the same adapter is used by
 human play, agents, the solver, and replay verification.
+
+<figure class="mechanism-video">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/movement-arrival-poster.jpg" aria-label="Zonoid OD-L1 gameplay recording">
+    <source src="/mechanisms/movement-arrival.mp4" type="video/mp4">
+    Your browser does not support embedded video.
+  </video>
+  <figcaption>Zonoid OD-L1: the universal grid reducer drives the board, legal controls, HUD, events, and terminal result shown here.</figcaption>
+</figure>

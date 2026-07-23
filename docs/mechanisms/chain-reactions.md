@@ -69,3 +69,11 @@ laser or explosive battery can create a seed effect, then the platform’s
 callback applies damage or destruction and returns newly affected entities.
 The SDK guarantees breadth-first ordering and once-per-identity activation;
 Zonoid supplies shields, immunity, damage, and presentation events.
+
+<figure class="mechanism-video">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/laser-combat-poster.jpg" aria-label="Zonoid TB-L1 gameplay recording">
+    <source src="/mechanisms/laser-combat.mp4" type="video/mp4">
+    Your browser does not support embedded video.
+  </video>
+  <figcaption>Zonoid TB-L1: laser effects settle through the combat cascade while product damage and shield policy remain visible in the HUD.</figcaption>
+</figure>

@@ -187,3 +187,11 @@ committed move can enqueue arrivals, a switch can update a gate, a belt can
 create another movement pass, and a laser or pickup can enqueue damage or
 resource work. The platform supplies those jobs and policies; the SDK keeps
 ordering, deduplication, and the authored safety bound deterministic.
+
+<figure class="mechanism-video">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/push-transport-poster.jpg" aria-label="Zonoid OD-L4 gameplay recording">
+    <source src="/mechanisms/push-transport.mp4" type="video/mp4">
+    Your browser does not support embedded video.
+  </video>
+  <figcaption>Zonoid OD-L4: movement, pushes, belt passes, switch updates, gate changes, and arrivals settle as one bounded deterministic turn pipeline.</figcaption>
+</figure>

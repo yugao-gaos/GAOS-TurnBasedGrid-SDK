@@ -97,3 +97,11 @@ belt run to its switch or powered-plug sources, proposes eligible actors,
 Relics, and batteries, and resolves each pass through the same movement core as
 walking. `resolveInterlock` handles the feedback loop when belt occupancy
 changes a switch or plug state; the board’s belt-cell count supplies the bound.
+
+<figure class="mechanism-video">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/push-transport-poster.jpg" aria-label="Zonoid OD-L4 gameplay recording">
+    <source src="/mechanisms/push-transport.mp4" type="video/mp4">
+    Your browser does not support embedded video.
+  </video>
+  <figcaption>Zonoid OD-L4: directed belt cells, linked switches, occupants, and boxes settle through repeated bounded movement passes.</figcaption>
+</figure>

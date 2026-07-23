@@ -64,3 +64,11 @@ layout, beams, movement, NPC choices, and winnability remain deterministic;
 the platform declares the odds in the observation and keys a roll by level,
 attempt, subject, effect, and per-subject counter so junk actions cannot shift
 the result stream.
+
+<figure class="mechanism-video">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/laser-combat-poster.jpg" aria-label="Zonoid TB-L1 gameplay recording">
+    <source src="/mechanisms/laser-combat.mp4" type="video/mp4">
+    Your browser does not support embedded video.
+  </video>
+  <figcaption>Zonoid TB-L1: this recorded run is reproducible from the same board, seed, and canonical action sequence; stochastic character effects use event-keyed draws.</figcaption>
+</figure>
