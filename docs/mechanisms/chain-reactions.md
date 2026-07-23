@@ -71,9 +71,9 @@ The SDK guarantees breadth-first ordering and once-per-identity activation;
 Zonoid supplies shields, immunity, damage, and presentation events.
 
 <figure class="mechanism-video">
-  <video controls muted playsinline preload="metadata" poster="/mechanisms/rays-chain-reactions-centered-poster.jpg" aria-label="Focused Zonoid chain reaction demo board recording">
-    <source src="/mechanisms/rays-chain-reactions-centered.mp4" type="video/mp4">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/chain-reactions-poster.jpg" aria-label="Focused Zonoid chain reaction demo board recording">
+    <source src="/mechanisms/chain-reactions.mp4" type="video/mp4">
     Your browser does not support embedded video.
   </video>
-  <figcaption>Focused Zonoid demo board: one beam impact starts the visible, deterministically ordered effect cascade.</figcaption>
+  <figcaption>Focused Zonoid demo board: one shot detonates the first target and propagates a deterministically ordered explosion chain.</figcaption>
 </figure>

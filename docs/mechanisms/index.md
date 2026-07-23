@@ -57,6 +57,41 @@ the [settlement kernel](/settlement).
 | [Solver](solver.md) | Breadth-first minimum-action search over an injected reducer |
 | [Replay verification](replay.md) | Transcript permutation checks and deterministic re-simulation |
 
+## Product integration showcases
+
+These focused boards show how Zonoid composes several SDK mechanisms into
+player-facing interactions while retaining the normal game UI.
+
+### [Simultaneous movement](/mechanisms/simultaneous-movement.mp4)
+
+<figure class="mechanism-video">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/simultaneous-movement-poster.jpg" aria-label="Zonoid simultaneous movement product integration recording">
+    <source src="/mechanisms/simultaneous-movement.mp4" type="video/mp4">
+    Your browser does not support embedded video.
+  </video>
+  <figcaption>Multiple rival NPCs and the player resolve their movement together from the same turn snapshot.</figcaption>
+</figure>
+
+### [NPC conversation](/mechanisms/npc-conversation.mp4)
+
+<figure class="mechanism-video">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/npc-conversation-poster.jpg" aria-label="Zonoid NPC conversation product integration recording">
+    <source src="/mechanisms/npc-conversation.mp4" type="video/mp4">
+    Your browser does not support embedded video.
+  </video>
+  <figcaption>The player starts a conversation and selects a dialogue response through Zonoid’s normal interaction UI.</figcaption>
+</figure>
+
+### [Rival battle](/mechanisms/rival-battle.mp4)
+
+<figure class="mechanism-video">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/rival-battle-poster.jpg" aria-label="Zonoid rival battle product integration recording">
+    <source src="/mechanisms/rival-battle.mp4" type="video/mp4">
+    Your browser does not support embedded video.
+  </video>
+  <figcaption>The player and a rival exchange actions in a focused battle board with health and equipment visible.</figcaption>
+</figure>
+
 ## Shared conventions
 
 - **Stable identities are data.** Entity, job, trigger, claim, and rule ids must

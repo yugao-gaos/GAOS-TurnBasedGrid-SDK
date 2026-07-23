@@ -71,9 +71,9 @@ the SDK and accepts neither. This keeps simultaneous turns fair; Zonoid then
 emits the appropriate bounce, collision, or no-op event.
 
 <figure class="mechanism-video">
-  <video controls muted playsinline preload="metadata" poster="/mechanisms/projectile-resource-use-centered-poster.jpg" aria-label="Focused Zonoid resource claim demo board recording">
-    <source src="/mechanisms/projectile-resource-use-centered.mp4" type="video/mp4">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/resource-claims-poster.jpg" aria-label="Focused Zonoid resource claim demo board recording">
+    <source src="/mechanisms/resource-claims.mp4" type="video/mp4">
     Your browser does not support embedded video.
   </video>
-  <figcaption>Focused Zonoid demo board: the projectile claims its destination only after path and occupancy checks succeed.</figcaption>
+  <figcaption>Focused Zonoid demo board: a battery pickup is resolved as a resource claim before the player uses it to restore Energy.</figcaption>
 </figure>

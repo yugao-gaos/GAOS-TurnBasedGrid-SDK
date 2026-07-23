@@ -65,9 +65,9 @@ computes linked activation and occupancy, then uses this SDK transition to
 update the door and emit one `opened` or `closed` event.
 
 <figure class="mechanism-video">
-  <video controls muted playsinline preload="metadata" poster="/mechanisms/gates-transport-centered-poster.jpg" aria-label="Focused Zonoid gate demo board recording">
-    <source src="/mechanisms/gates-transport-centered.mp4" type="video/mp4">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/gates-poster.jpg" aria-label="Focused Zonoid gate demo board recording">
+    <source src="/mechanisms/gates.mp4" type="video/mp4">
     Your browser does not support embedded video.
   </video>
-  <figcaption>Focused Zonoid demo board: occupying the switch opens its linked gate before movement continues.</figcaption>
+  <figcaption>Focused Zonoid demo board: stepping onto a switch opens the linked door and makes the next passage traversable.</figcaption>
 </figure>

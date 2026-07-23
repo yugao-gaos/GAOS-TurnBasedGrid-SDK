@@ -59,9 +59,9 @@ the transaction atomically; Zonoid owns Energy capacity, refunds, display, and
 which level actions cost energy.
 
 <figure class="mechanism-video">
-  <video controls muted playsinline preload="metadata" poster="/mechanisms/projectile-resource-use-centered-poster.jpg" aria-label="Focused Zonoid resource use demo board recording">
-    <source src="/mechanisms/projectile-resource-use-centered.mp4" type="video/mp4">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/resources-poster.jpg" aria-label="Focused Zonoid resource transaction demo board recording">
+    <source src="/mechanisms/resources.mp4" type="video/mp4">
     Your browser does not support embedded video.
   </video>
-  <figcaption>Focused Zonoid demo board: firing the projectile consumes the displayed resource as one atomic action.</figcaption>
+  <figcaption>Focused Zonoid demo board: the player picks up a battery and uses it to restore the Energy shown in the HUD.</figcaption>
 </figure>
