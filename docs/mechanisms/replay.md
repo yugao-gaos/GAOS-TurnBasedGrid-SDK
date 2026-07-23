@@ -77,5 +77,5 @@ instead of being accepted as a leaderboard result.
     <source src="/mechanisms/replay.mp4" type="video/mp4">
     Your browser does not support embedded video.
   </video>
-  <figcaption>Focused Zonoid demo board: the same seed and four-action transcript run twice, reproducing the same board states.</figcaption>
+  <figcaption>Zonoid Story Level 1: the same seed and solver-verified 19-action solution runs twice to completion, producing an identical final state.</figcaption>
 </figure>
