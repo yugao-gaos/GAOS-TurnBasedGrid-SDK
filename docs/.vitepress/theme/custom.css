@@ -81,6 +81,27 @@
   margin-top: 0;
 }
 
+.mechanism-video {
+  margin: 1.5rem 0 0;
+}
+
+.mechanism-video video {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  border: 1px solid var(--vp-c-divider);
+  border-radius: 12px;
+  background: #000;
+  box-shadow: 0 14px 36px rgba(0, 0, 0, 0.18);
+}
+
+.mechanism-video figcaption {
+  margin-top: 0.65rem;
+  color: var(--vp-c-text-2);
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
 @media (max-width: 700px) {
   .ownership-grid {
     grid-template-columns: 1fr;

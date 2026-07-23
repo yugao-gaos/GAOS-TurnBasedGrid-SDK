@@ -69,3 +69,11 @@ effects against one pre-commit world snapshot. If two independent intents claim
 the same Relic, destination, or flight cell, the platform passes both claims to
 the SDK and accepts neither. This keeps simultaneous turns fair; Zonoid then
 emits the appropriate bounce, collision, or no-op event.
+
+<figure class="mechanism-video">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/projectile-use-poster.jpg" aria-label="Zonoid OU-L1 gameplay recording">
+    <source src="/mechanisms/projectile-use.mp4" type="video/mp4">
+    Your browser does not support embedded video.
+  </video>
+  <figcaption>Zonoid OU-L1: the throw qualifies its carried item, path, and destination before the product commits any contested resource changes.</figcaption>
+</figure>

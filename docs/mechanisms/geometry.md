@@ -98,3 +98,11 @@ targeted commands. Its FOV adapter supplies walls, doors, half-walls, actors,
 facing, and range to the geometry helpers; the resulting cells are then used
 for Inspect visibility, guard sight, and agent observations. The SDK computes
 the geometry, while Zonoid owns fog, disguise state, and what is redacted.
+
+<figure class="mechanism-video">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/npc-cooperation-poster.jpg" aria-label="Zonoid SL-L1 gameplay recording">
+    <source src="/mechanisms/npc-cooperation.mp4" type="video/mp4">
+    Your browser does not support embedded video.
+  </video>
+  <figcaption>Zonoid SL-L1: path overlays and NPC destinations use the same board geometry consumed by agent observations.</figcaption>
+</figure>

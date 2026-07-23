@@ -80,3 +80,11 @@ Use, Talk, Inspect, and targeted actions, finds a minimum-action winning route,
 and supplies a baseline for three- and two-star thresholds. Product state such
 as fired events, delivered objects, and dialogue evidence stays in the injected
 reducer and its state key.
+
+<figure class="mechanism-video">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/movement-arrival-poster.jpg" aria-label="Zonoid OD-L1 gameplay recording">
+    <source src="/mechanisms/movement-arrival.mp4" type="video/mp4">
+    Your browser does not support embedded video.
+  </video>
+  <figcaption>Zonoid OD-L1: the autoplay sequence shown here was recovered from the same universal reducer used by the minimum-action solver.</figcaption>
+</figure>

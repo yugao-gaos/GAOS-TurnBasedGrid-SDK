@@ -88,3 +88,11 @@ The platform supplies each path and its collision policy: a thrown object can
 cross a half-wall, stop at a solid blocker, land on a receiver, or damage a
 unit. The SDK performs snapshot-safe passes; Zonoid applies the resulting
 pickup, damage, relay, and visual events.
+
+<figure class="mechanism-video">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/projectile-use-poster.jpg" aria-label="Zonoid OU-L1 gameplay recording">
+    <source src="/mechanisms/projectile-use.mp4" type="video/mp4">
+    Your browser does not support embedded video.
+  </video>
+  <figcaption>Zonoid OU-L1: the player raises the Relic, selects a target cell, and the full-flight helper advances it through the board.</figcaption>
+</figure>

@@ -67,3 +67,11 @@ passes. The platform registers rules for picking up a Relic or battery, landing
 on a matching shape exit, entering an objective cell, and resolving a battery
 or plug interaction. The SDK orders those rules; Zonoid decides which token is
 consumed, which objective changes, and which visual event is emitted.
+
+<figure class="mechanism-video">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/movement-arrival-poster.jpg" aria-label="Zonoid OD-L1 gameplay recording">
+    <source src="/mechanisms/movement-arrival.mp4" type="video/mp4">
+    Your browser does not support embedded video.
+  </video>
+  <figcaption>Zonoid OD-L1: movement commits first, then the Relic pickup and exit arrival update the product state.</figcaption>
+</figure>

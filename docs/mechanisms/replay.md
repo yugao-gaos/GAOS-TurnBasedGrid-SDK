@@ -71,3 +71,11 @@ Before a result reaches the official benchmark, Zonoid selects the matching
 universal reducer and re-simulates the transcript with this SDK helper. A
 desync, rejected action, altered permutation, or forged star count is reported
 instead of being accepted as a leaderboard result.
+
+<figure class="mechanism-video">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/movement-arrival-poster.jpg" aria-label="Zonoid OD-L1 gameplay recording">
+    <source src="/mechanisms/movement-arrival.mp4" type="video/mp4">
+    Your browser does not support embedded video.
+  </video>
+  <figcaption>Zonoid OD-L1: this clip was generated from a fixed canonical action script that the same reducer can replay and verify.</figcaption>
+</figure>
