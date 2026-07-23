@@ -88,9 +88,9 @@ Zonoid uses solver measurements as authoring input, then tunes thresholds with
 human and agent play.
 
 <figure class="mechanism-video">
-  <video controls muted playsinline preload="metadata" poster="/mechanisms/movement-arrival-poster.jpg" aria-label="Zonoid OD-L1 gameplay recording">
-    <source src="/mechanisms/movement-arrival.mp4" type="video/mp4">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/push-solver-scoring-poster.jpg" aria-label="Focused Zonoid scoring demo board recording">
+    <source src="/mechanisms/push-solver-scoring.mp4" type="video/mp4">
     Your browser does not support embedded video.
   </video>
-  <figcaption>Zonoid OD-L1: the terminal result derives its star rating from the completed run's canonical action count.</figcaption>
+  <figcaption>Focused Zonoid demo board: the completed push sequence is scored from its canonical action count.</figcaption>
 </figure>

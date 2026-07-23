@@ -65,9 +65,9 @@ computes linked activation and occupancy, then uses this SDK transition to
 update the door and emit one `opened` or `closed` event.
 
 <figure class="mechanism-video">
-  <video controls muted playsinline preload="metadata" poster="/mechanisms/gates-transport-poster.jpg" aria-label="Zonoid OD-L2 gameplay recording">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/gates-transport-poster.jpg" aria-label="Focused Zonoid gate demo board recording">
     <source src="/mechanisms/gates-transport.mp4" type="video/mp4">
     Your browser does not support embedded video.
   </video>
-  <figcaption>Zonoid OD-L2: occupying the authored switch opens the linked door before the delivery route continues.</figcaption>
+  <figcaption>Focused Zonoid demo board: occupying the switch opens its linked gate before movement continues.</figcaption>
 </figure>

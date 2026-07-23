@@ -90,9 +90,9 @@ unit. The SDK performs snapshot-safe passes; Zonoid applies the resulting
 pickup, damage, relay, and visual events.
 
 <figure class="mechanism-video">
-  <video controls muted playsinline preload="metadata" poster="/mechanisms/projectile-use-poster.jpg" aria-label="Zonoid OU-L1 gameplay recording">
-    <source src="/mechanisms/projectile-use.mp4" type="video/mp4">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/projectile-resource-use-poster.jpg" aria-label="Focused Zonoid projectile demo board recording">
+    <source src="/mechanisms/projectile-resource-use.mp4" type="video/mp4">
     Your browser does not support embedded video.
   </video>
-  <figcaption>Zonoid OU-L1: the player raises the Relic, selects a target cell, and the full-flight helper advances it through the board.</figcaption>
+  <figcaption>Focused Zonoid demo board: one projectile travels cell by cell from the player toward the selected target.</figcaption>
 </figure>
