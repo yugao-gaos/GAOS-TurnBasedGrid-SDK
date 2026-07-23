@@ -90,3 +90,10 @@ occupancy snapshots, commit/events, source logic, and convergence conditions.
 The SDK owns proposal shape, bounded pass control, component fan-out, and the
 settle/update phase order.
 
+## Zonoid example
+
+Zonoid belts are directed transport cells. The platform maps each connected
+belt run to its switch or powered-plug sources, proposes eligible actors,
+Relics, and batteries, and resolves each pass through the same movement core as
+walking. `resolveInterlock` handles the feedback loop when belt occupancy
+changes a switch or plug state; the board’s belt-cell count supplies the bound.

@@ -56,3 +56,11 @@ key format, draw order, or permutation algorithm changes historical outcomes.
 When such a change is intentional, version the game/reducer rules and retain the
 old implementation for old transcripts.
 
+## Zonoid example
+
+Zonoid stores the run seed and uses event-keyed draws for the small number of
+character-effect outcomes that are intentionally probabilistic. The world
+layout, beams, movement, NPC choices, and winnability remain deterministic;
+the platform declares the odds in the observation and keys a roll by level,
+attempt, subject, effect, and per-subject counter so junk actions cannot shift
+the result stream.

@@ -85,3 +85,11 @@ the [settlement kernel](/settlement).
 Cover at least: a legal rotation, a blocked chain that fully reverts, contested
 destinations, both swap consent states, equal-priority input ordering, a
 multi-cell footprint, and an out-of-bounds target reported as static blocked.
+
+## Zonoid example
+
+Zonoid turns player movement, NPC orders, box pushes, and conveyor proposals
+into one movement snapshot. The platform validates each action and supplies
+walls, doors, footprints, and priorities; the SDK resolves the batch so an
+actor cannot win by arriving earlier in an iteration. Positions are committed
+before Zonoid runs pickups, doors, damage, and other arrivals.

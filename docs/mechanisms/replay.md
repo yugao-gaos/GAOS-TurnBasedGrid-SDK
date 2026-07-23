@@ -63,3 +63,11 @@ ids, and randomness. Version those together. Verification should select the
 historical adapter before calling this helper rather than replaying old data
 through current rules.
 
+## Zonoid example
+
+When a Zonoid scored session finishes, the server stores the level version,
+seed, action-label permutation, canonical action log, and terminal summary.
+Before a result reaches the official benchmark, Zonoid selects the matching
+universal reducer and re-simulates the transcript with this SDK helper. A
+desync, rejected action, altered permutation, or forged star count is reported
+instead of being accepted as a leaderboard result.

@@ -59,3 +59,10 @@ cooldowns, spawning, memory, blackboards, entity rules, and fallback policy.
 The SDK guarantees only the selector/condition/leaf control flow and the exact
 short-circuit behavior described above.
 
+## Zonoid example
+
+Zonoid authors hostile and allied NPC behavior as product trees. A guard can
+select “attack if a target is visible,” otherwise “follow its standing order,”
+otherwise “patrol.” The adapter evaluates those conditions against the current
+world and returns a product order; the universal reducer then resolves all NPC
+orders together with the player’s action.

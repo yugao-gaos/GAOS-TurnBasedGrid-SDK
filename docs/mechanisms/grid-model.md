@@ -100,3 +100,10 @@ Before connecting a reducer, test these properties:
 The SDK owns the adapter shape. The product continues to own state layout,
 validation, rules, content, serialization, and authoritative persistence.
 
+## Zonoid example
+
+Zonoid implements one universal `GridReducer` for Object Delivery, Object
+Usage, Signal Language, The Breach, Intelligence Lies, and Jailbreak Protocol.
+The reducer initializes a product `World`, applies the canonical move/use/talk/
+inspect actions, and exposes a redacted `TurnView`; the same adapter is used by
+human play, agents, the solver, and replay verification.

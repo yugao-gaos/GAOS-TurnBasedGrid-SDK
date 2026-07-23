@@ -61,3 +61,11 @@ include a product-owned phase/version when distinct activations are legitimate.
 
 The `react` callback should return neighbors in a stable order. Iterating an
 unordered external collection can make same-wave effects differ between runs.
+
+## Zonoid example
+
+Zonoid uses the chain-reaction primitive for same-turn effect propagation. A
+laser or explosive battery can create a seed effect, then the platform’s
+callback applies damage or destruction and returns newly affected entities.
+The SDK guarantees breadth-first ordering and once-per-identity activation;
+Zonoid supplies shields, immunity, damage, and presentation events.

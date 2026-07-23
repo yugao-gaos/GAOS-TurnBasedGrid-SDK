@@ -49,3 +49,11 @@ bound failures remain structured transaction results.
 AI action limits are separate runtime guardrails. Use
 `aiActionLimitExceeded({ actionsUsed, maxActions })` regardless of which, if
 any, product resources an AI action consumes.
+
+## Zonoid example
+
+Zonoid projects its Energy HUD onto the generic resource ledger. A committed
+action plans an `energy` requirement and debit, while batteries, pickups, and
+abilities can publish the same transaction-shaped changes. The SDK validates
+the transaction atomically; Zonoid owns Energy capacity, refunds, display, and
+which level actions cost energy.

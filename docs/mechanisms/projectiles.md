@@ -80,3 +80,11 @@ replay reaches the same state without running animation code.
 - a collision that consumes rather than lands;
 - a relay that changes the next path segment; and
 - a flight that remains active at the pass bound.
+
+## Zonoid example
+
+Zonoid uses full-flight movement for thrown Relics, batteries, and bat swings.
+The platform supplies each path and its collision policy: a thrown object can
+cross a half-wall, stop at a solid blocker, land on a receiver, or damage a
+unit. The SDK performs snapshot-safe passes; Zonoid applies the resulting
+pickup, damage, relay, and visual events.
