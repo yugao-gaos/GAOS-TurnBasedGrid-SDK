@@ -1,0 +1,9 @@
+{
+  "task_key": "codex/publish-complex-turn-settlement-showcase",
+  "git_user": "yugao-gaos <yu.gao@gaos.ca>",
+  "session_id": "codex-mcp-64008-54e4da635d26f7e92607eb09f44e1220",
+  "branch": "orch/attempt/codex-publish-complex-turn-settlement-showcase",
+  "status": "claimed",
+  "claimed_at": "2026-07-23T19:20:54.529Z",
+  "lease_until": "2026-07-23T20:20:54.529Z"
+}
