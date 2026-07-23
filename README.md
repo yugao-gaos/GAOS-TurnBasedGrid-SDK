@@ -27,6 +27,7 @@ platform repository.
 
 **[Read the documentation](https://yugao-gaos.github.io/GAOS-TurnBasedGrid-SDK/)**
 or begin with the [quickstart](https://yugao-gaos.github.io/GAOS-TurnBasedGrid-SDK/quickstart).
+For SDK questions, ideas, and community support, [join the GAOS Discord community](https://discord.gg/vdvUgcqPU).
 
 **Built with GAOS:** [Zonoid](https://zonoid.ai) is the toolkit's first
 production game and live reference.
@@ -60,6 +61,7 @@ Session ID are collected in [DEVPOST.md](DEVPOST.md).
 - **Source:** https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK
 - **Documentation:** https://yugao-gaos.github.io/GAOS-TurnBasedGrid-SDK/
 - **Release:** https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK/releases/tag/v0.12.0
+- **Community:** https://discord.gg/vdvUgcqPU
 - **Live game and prebuilt download:** https://zonoid.ai
 
 ### Install and test a prebuilt release

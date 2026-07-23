@@ -34,6 +34,9 @@ Use [GitHub Issues](https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK/issues)
 for reproducible bugs and focused feature requests. Include the SDK version,
 runtime version, minimal input or reducer, expected result, and actual result.
 
+For questions, implementation ideas, and community discussion, [join the GAOS
+Discord community](https://discord.gg/vdvUgcqPU).
+
 Do not report suspected vulnerabilities in a public issue. Follow the private
 instructions in the repository's
 [security policy](https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK/security/policy).

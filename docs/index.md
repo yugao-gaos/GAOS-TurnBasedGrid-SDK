@@ -51,6 +51,8 @@ coordination, and adaptation between actors.
 
 [Why games—and why simultaneous turn-based play—make strong benchmarks →](/mission)
 
+[Join the GAOS Discord community →](https://discord.gg/vdvUgcqPU)
+
 ## One reducer, every way to play
 
 The same injected deterministic reducer can power local play, hosted sessions,

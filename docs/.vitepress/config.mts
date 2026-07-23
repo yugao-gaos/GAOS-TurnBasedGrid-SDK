@@ -1,7 +1,7 @@
 import { defineConfig } from 'vitepress';
 
 export default defineConfig({
-  title: 'GAOS Turn-Based Grid Toolkit',
+  title: 'Gaming AGI Open SDK',
   description: 'Games as benchmarks for human and AI agents.',
   base: '/GAOS-TurnBasedGrid-SDK/',
   cleanUrls: true,
@@ -44,15 +44,14 @@ export default defineConfig({
     }],
   ],
   themeConfig: {
-    siteTitle: 'GAOS Turn-Based Grid Toolkit',
+    siteTitle: 'Gaming AGI Open SDK',
     nav: [
       { text: 'Mission', link: '/mission' },
       { text: 'Guide', link: '/quickstart' },
       { text: 'Mechanisms', link: '/mechanisms/' },
       { text: 'Agentic play', link: '/agentic-play' },
-      { text: 'Protocol', link: '/protocol-v1' },
-      { text: 'Python', link: '/python' },
       { text: 'v0.9.1', link: '/releases' },
+      { text: 'Discord', link: 'https://discord.gg/vdvUgcqPU' },
     ],
     sidebar: [
       {
@@ -120,6 +119,7 @@ export default defineConfig({
     ],
     socialLinks: [
       { icon: 'github', link: 'https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK' },
+      { icon: 'discord', link: 'https://discord.gg/vdvUgcqPU' },
     ],
     search: { provider: 'local' },
     editLink: {
