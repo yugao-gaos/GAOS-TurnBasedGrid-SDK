@@ -73,8 +73,8 @@ desync, rejected action, altered permutation, or forged star count is reported
 instead of being accepted as a leaderboard result.
 
 <figure class="mechanism-video">
-  <video controls muted playsinline preload="metadata" poster="/mechanisms/simultaneous-movement-poster.jpg" aria-label="Focused Zonoid deterministic replay demo board recording">
-    <source src="/mechanisms/simultaneous-movement.mp4" type="video/mp4">
+  <video controls muted playsinline preload="metadata" poster="/mechanisms/simultaneous-movement-board-only-poster.jpg" aria-label="Focused Zonoid deterministic replay demo board recording">
+    <source src="/mechanisms/simultaneous-movement-board-only.mp4" type="video/mp4">
     Your browser does not support embedded video.
   </video>
   <figcaption>Focused Zonoid demo board: a fixed action script reproduces the same simultaneous movement sequence for replay verification.</figcaption>
