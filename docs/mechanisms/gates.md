@@ -69,5 +69,5 @@ update the door and emit one `opened` or `closed` event.
     <source src="/mechanisms/gates.mp4" type="video/mp4">
     Your browser does not support embedded video.
   </video>
-  <figcaption>Focused Zonoid demo board: stepping onto a switch opens the linked door and makes the next passage traversable.</figcaption>
+  <figcaption>Focused Zonoid demo board: a pressure plate opens the gate, the occupied doorway holds it open, and stepping clear lets it close safely.</figcaption>
 </figure>

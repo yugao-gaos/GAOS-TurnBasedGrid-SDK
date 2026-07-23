@@ -86,5 +86,5 @@ reducer and its state key.
     <source src="/mechanisms/solver.mp4" type="video/mp4">
     Your browser does not support embedded video.
   </video>
-  <figcaption>Focused Zonoid demo board: the solver finds and replays a multi-step box-and-conveyor route to the objective.</figcaption>
+  <figcaption>Focused Zonoid demo board: the solver computes and replays the seven-action minimum through a box push, conveyor, gate, and exit.</figcaption>
 </figure>

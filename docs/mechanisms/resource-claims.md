@@ -75,5 +75,5 @@ emits the appropriate bounce, collision, or no-op event.
     <source src="/mechanisms/resource-claims.mp4" type="video/mp4">
     Your browser does not support embedded video.
   </video>
-  <figcaption>Focused Zonoid demo board: a battery pickup is resolved as a resource claim before the player uses it to restore Energy.</figcaption>
+  <figcaption>Focused Zonoid demo board: the player and rival claim one battery simultaneously; only the winning claim receives and uses it.</figcaption>
 </figure>

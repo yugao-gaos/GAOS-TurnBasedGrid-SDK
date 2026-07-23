@@ -63,5 +63,5 @@ effects, so replay and nested settlement cannot fire it twice.
     <source src="/mechanisms/triggers.mp4" type="video/mp4">
     Your browser does not support embedded video.
   </video>
-  <figcaption>Focused Zonoid demo board: the player steps on a switch, firing its one-shot trigger and opening the linked door.</figcaption>
+  <figcaption>Focused Zonoid demo board: the player steps on, off, and back onto a switch to show that its one-shot trigger fires only once.</figcaption>
 </figure>
