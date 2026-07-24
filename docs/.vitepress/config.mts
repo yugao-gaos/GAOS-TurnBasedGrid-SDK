@@ -103,7 +103,7 @@ export default defineConfig({
           { text: 'Deterministic randomness', link: '/mechanisms/randomness' },
           { text: 'Scoring and AI action limits', link: '/mechanisms/scoring' },
           { text: 'Solver', link: '/mechanisms/solver' },
-          { text: 'Replay verification', link: '/mechanisms/replay' },
+          { text: 'Portable replay and verification', link: '/mechanisms/replay' },
           { text: 'High-frequency turns', link: '/high-frequency' },
         ],
       },

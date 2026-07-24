@@ -1,4 +1,148 @@
-# Replay verification
+# Portable replay and verification
+
+`gaos.replay` v1 is the SDK-owned evidence envelope for a deterministic game
+session or ordered multi-level run. Arena, creator platforms, local
+evaluators, and third-party benchmark tools can exchange one self-identifying
+JSONL artifact instead of defining platform-specific wrappers around the same
+SDK transcript.
+
+The first line is a `ReplayHeader`. Every following line is a `ReplayAction`,
+which extends `TranscriptAction` with `kind: "action"` and `levelIndex`.
+
+```jsonl
+{"format":"gaos.replay","formatVersion":"1.0","game":{"adapter":{"id":"creator/demo/reducer","version":"commit:abc123"},"id":"creator/demo","version":"1.0.0"},"kind":"header","levels":[{"id":"intro","index":0,"level":{"goal":3},"result":{"actionsUsed":2,"stars":3,"status":"won"},"seed":2654435731}],"perm":[0,1],"seed":42,"seedPolicy":"gaos.run-level-seed.v1","sessionId":"run-42","totals":{"totalActionsUsed":2,"totalStars":3}}
+{"canonicalId":"Action 1","kind":"action","levelIndex":0,"n":0,"wireId":"Action 1"}
+{"canonicalId":"Action 2","index":2,"kind":"action","levelIndex":0,"n":1,"wireId":"Action 2"}
+```
+
+Property order is not semantic. `serializeReplayJsonl` emits canonical
+lexicographically ordered JSON with one trailing newline, making the exact
+artifact suitable for hashing, signing, and object storage.
+
+## Header contract
+
+The header pins everything shared tooling needs before reducer execution:
+
+- `format` and `formatVersion`, currently `gaos.replay` / `1.0`;
+- a stable game id/version and historical adapter id/version;
+- the run seed and either explicit seeds or
+  `gaos.run-level-seed.v1` derivation;
+- the default wire-to-canonical action permutation;
+- an ordered level list with an explicit seed, self-contained level
+  definition, recorded result, and optional content version;
+- aggregate stars and action usage;
+- optional transcript visibility and JSON extension objects.
+
+Adapter identity is intentionally separate from game identity. A game release
+can keep the same content id while selecting the exact reducer implementation
+needed to recheck an old result. The SDK does not download or execute adapters;
+the verifier supplies a trusted registry callback.
+
+Every level stores its seed even when the run uses
+`gaos.run-level-seed.v1`. This makes a segment independently inspectable while
+letting validation detect a seed that disagrees with the declared derivation.
+
+## Creating and transporting an artifact
+
+```ts
+import {
+  GAOS_REPLAY_MANIFEST_FORMAT,
+  createReplayArtifact,
+  parseReplayJsonl,
+  serializeReplayJsonl,
+} from '@yugao-gaos/turn-based-grid-sdk/engine';
+
+const artifact = createReplayArtifact({
+  sessionId: 'run-42',
+  game: {
+    id: 'creator/demo',
+    version: '1.0.0',
+    adapter: { id: 'creator/demo/reducer', version: 'commit:abc123' },
+  },
+  seed: 42,
+  perm: [0, 1],
+  levels: [{
+    id: 'intro',
+    version: 3,
+    level: { goal: 3 },
+    result: { status: 'won', stars: 3, actionsUsed: 2 },
+  }],
+  actions: [
+    { n: 0, levelIndex: 0, wireId: 'Action 1', canonicalId: 'Action 1' },
+    { n: 1, levelIndex: 0, wireId: 'Action 2', canonicalId: 'Action 2', index: 2 },
+  ],
+});
+
+const stored = serializeReplayJsonl(artifact);
+const restored = parseReplayJsonl(stored);
+```
+
+`GAOS_REPLAY_MANIFEST_FORMAT` is the portable declaration for a host manifest:
+
+```ts
+results: {
+  schema: 'creator.demo.result/v1',
+  replayFormat: GAOS_REPLAY_MANIFEST_FORMAT,
+}
+```
+
+It declares MIME `application/vnd.gaos.replay+jsonl`, extension
+`gaos-replay.jsonl`, and `compressed: false`. A host may gzip transport or
+storage, but decompression must recover the canonical JSONL bytes.
+
+## Whole-run recheck
+
+`recheckReplayArtifact` validates the envelope, groups actions by level, and
+calls the existing `recheckTranscript` for every segment. The product supplies
+only a trusted adapter registry:
+
+```ts
+const checked = recheckReplayArtifact(
+  artifact,
+  ({ game }) => reducerRegistry.get(
+    `${game.adapter.id}@${game.adapter.version}`,
+  ),
+);
+
+if (!checked.ok) console.error(checked.problems);
+```
+
+The checker verifies global action numbering and level ordering, per-level seed
+policy, each recorded terminal result, and aggregate totals. Problems are
+prefixed with the level index/id so a multi-level run can be diagnosed without
+splitting the evidence file.
+
+## Existing transcript compatibility
+
+The reducer-level `TranscriptHeader` and `TranscriptAction` contracts remain
+the core single-level inputs. `transcriptToReplayArtifact` wraps them without
+changing their seed, visibility, permutation, ticks, targeting, or action
+numbers:
+
+```ts
+const portable = transcriptToReplayArtifact(header, actions, {
+  game: gameAndAdapterRef,
+  levelId: 'intro',
+  levelVersion: 3,
+});
+```
+
+Arena's existing run header maps directly:
+
+| Arena run field | `gaos.replay` field |
+| --- | --- |
+| `sessionId`, `seed`, `perm` | same header fields |
+| `levels[i]` | `levels[i].level` |
+| derived `runLevelSeed(seed, i)` | explicit `levels[i].seed` plus derived seed policy |
+| `results[i]` | `levels[i].result` |
+| `totalStars`, `totalSteps` | `totals.totalStars`, `totals.totalActionsUsed` |
+| action `levelIndex` | action `levelIndex` |
+
+TabletopLabs can use the manifest constant above and emit the identical
+envelope from creator sessions. Shared tooling then resolves the declared
+adapter and verifies either producer with the same parse/recheck path.
+
+## Reducer-level transcript inputs
 
 `recheckTranscript` verifies an action-label permutation, re-simulates
 canonical actions through a deterministic reducer, and compares the recorded

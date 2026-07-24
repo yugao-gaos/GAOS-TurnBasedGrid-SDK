@@ -1,0 +1,218 @@
+import { describe, expect, it } from 'vitest';
+import {
+  GAOS_REPLAY_DERIVED_SEEDS,
+  GAOS_REPLAY_EXTENSION,
+  GAOS_REPLAY_MANIFEST_FORMAT,
+  GAOS_REPLAY_MIME,
+  ReplayFormatError,
+  createReplayArtifact,
+  parseReplayJsonl,
+  recheckReplayArtifact,
+  runLevelSeed,
+  serializeReplayJsonl,
+  transcriptToReplayArtifact,
+  validateReplayArtifact,
+  type ReplayArtifact,
+  type ReplayGameRef,
+  type TurnReducer,
+  type TurnView,
+} from '../src/engine/index.js';
+
+interface Level {
+  id: string;
+  goal: number;
+}
+
+interface State {
+  at: number;
+  actionsUsed: number;
+}
+
+const reducer: TurnReducer<Level, State> = {
+  init: () => ({ at: 0, actionsUsed: 0 }),
+  apply: (state, action) => {
+    if (action.id !== 'Action 1') throw new Error('illegal action');
+    return { at: state.at + 1, actionsUsed: state.actionsUsed + 1 };
+  },
+  view: (state): TurnView => ({
+    actions: [{ id: 'Action 1', params: 'none' }],
+    status: state.at >= 1 ? 'won' : 'playing',
+    ...(state.at >= 1 ? { stars: 3 } : {}),
+    hud: { actionsUsed: state.actionsUsed },
+  }),
+};
+
+const game: ReplayGameRef = {
+  id: 'creator/tabletop-demo',
+  version: '7',
+  adapter: {
+    id: 'creator/tabletop-demo/reducer',
+    version: 'sha256:abc123',
+  },
+};
+
+function runArtifact(): ReplayArtifact<Level> {
+  return createReplayArtifact({
+    sessionId: 'portable-run',
+    game,
+    seed: 12345,
+    perm: [0],
+    levels: [
+      {
+        id: 'level-a',
+        version: 1,
+        level: { id: 'level-a', goal: 1 },
+        result: { status: 'won', stars: 3, actionsUsed: 1 },
+      },
+      {
+        id: 'level-b',
+        version: 4,
+        level: { id: 'level-b', goal: 1 },
+        result: { status: 'won', stars: 3, actionsUsed: 1 },
+      },
+    ],
+    actions: [
+      { n: 0, levelIndex: 0, wireId: 'Action 1', canonicalId: 'Action 1' },
+      { n: 1, levelIndex: 1, wireId: 'Action 1', canonicalId: 'Action 1' },
+    ],
+    extensions: {
+      producer: 'tabletoplabs',
+      benchmark: 'arena-compatible',
+    },
+  });
+}
+
+describe('portable GAOS replay JSONL', () => {
+  it('publishes one manifest declaration consumers can reuse', () => {
+    expect(GAOS_REPLAY_MANIFEST_FORMAT).toEqual({
+      mime: GAOS_REPLAY_MIME,
+      extension: GAOS_REPLAY_EXTENSION,
+      compressed: false,
+    });
+  });
+
+  it('normalizes per-level seeds and round-trips canonical JSONL', () => {
+    const artifact = runArtifact();
+    expect(artifact.header.seedPolicy).toBe(GAOS_REPLAY_DERIVED_SEEDS);
+    expect(artifact.header.levels.map(({ seed }) => seed)).toEqual([
+      runLevelSeed(12345, 0),
+      runLevelSeed(12345, 1),
+    ]);
+    expect(artifact.header.totals).toEqual({
+      totalStars: 6,
+      totalActionsUsed: 2,
+    });
+
+    const jsonl = serializeReplayJsonl(artifact);
+    expect(jsonl.endsWith('\n')).toBe(true);
+    expect(jsonl.trimEnd().split('\n')).toHaveLength(3);
+    const parsed = parseReplayJsonl<Level>(jsonl);
+    expect(parsed).toEqual(artifact);
+    expect(serializeReplayJsonl(parsed)).toBe(jsonl);
+  });
+
+  it('rechecks an ordered multi-level run through a product reducer registry', () => {
+    const artifact = runArtifact();
+    const result = recheckReplayArtifact(
+      artifact,
+      ({ game: replayGame }) => replayGame.adapter.id === game.adapter.id
+        ? reducer
+        : undefined,
+    );
+
+    expect(result).toMatchObject({
+      ok: true,
+      problems: [],
+      replayed: {
+        statuses: ['won', 'won'],
+        totalStars: 6,
+        totalActionsUsed: 2,
+      },
+    });
+    expect(result.levels.map(({ id, seed }) => ({ id, seed }))).toEqual(
+      artifact.header.levels.map(({ id, seed }) => ({ id, seed })),
+    );
+  });
+
+  it('detects seed, total, ordering, and adapter tampering', () => {
+    const artifact = runArtifact();
+    const wrongSeed = structuredClone(artifact);
+    wrongSeed.header.levels[1]!.seed++;
+    expect(validateReplayArtifact(wrongSeed).join('\n')).toMatch(/seed does not match/);
+
+    const wrongTotal = structuredClone(artifact);
+    wrongTotal.header.totals.totalStars++;
+    expect(recheckReplayArtifact(wrongTotal, () => reducer).problems.join('\n'))
+      .toMatch(/totalStars/);
+
+    const wrongOrder = structuredClone(artifact);
+    wrongOrder.actions[1]!.levelIndex = 0;
+    wrongOrder.actions.push({
+      kind: 'action',
+      n: 2,
+      levelIndex: 1,
+      wireId: 'Action 1',
+      canonicalId: 'Action 1',
+    });
+    wrongOrder.actions.push({
+      kind: 'action',
+      n: 3,
+      levelIndex: 0,
+      wireId: 'Action 1',
+      canonicalId: 'Action 1',
+    });
+    expect(validateReplayArtifact(wrongOrder).join('\n')).toMatch(/earlier level/);
+
+    expect(recheckReplayArtifact(artifact, () => undefined).problems.join('\n'))
+      .toMatch(/no reducer.*creator\/tabletop-demo\/reducer@sha256:abc123/);
+  });
+
+  it('lifts the existing TranscriptHeader/TranscriptAction pair without loss', () => {
+    const artifact = transcriptToReplayArtifact(
+      {
+        sessionId: 'legacy-single',
+        level: { id: 'only', goal: 1 },
+        seed: 77,
+        perm: [0],
+        status: 'won',
+        stars: 3,
+        actionsUsed: 1,
+        visibility: 'seat:red',
+      },
+      [{ n: 1, wireId: 'Action 1', canonicalId: 'Action 1', tick: 4 }],
+      { game, levelId: 'only', levelVersion: '2' },
+    );
+
+    expect(artifact.header).toMatchObject({
+      seed: 77,
+      seedPolicy: 'explicit',
+      visibility: 'seat:red',
+      levels: [{
+        index: 0,
+        id: 'only',
+        version: '2',
+        seed: 77,
+      }],
+    });
+    expect(artifact.actions).toEqual([{
+      kind: 'action',
+      n: 1,
+      levelIndex: 0,
+      wireId: 'Action 1',
+      canonicalId: 'Action 1',
+      tick: 4,
+    }]);
+    expect(recheckReplayArtifact(artifact, () => reducer).ok).toBe(true);
+  });
+
+  it('rejects malformed and foreign JSONL with actionable errors', () => {
+    expect(() => parseReplayJsonl('not-json\n')).toThrow(ReplayFormatError);
+    expect(() => parseReplayJsonl('{"kind":"header"}\n\n{"kind":"action"}\n'))
+      .toThrow(/line 2 must not be blank/);
+
+    const artifact = runArtifact();
+    const foreign = serializeReplayJsonl(artifact)
+      .replace('"format":"gaos.replay"', '"format":"vendor.replay"');
+    expect(() => parseReplayJsonl(foreign)).toThrow(/header\.format must be gaos\.replay/);
+  });
+});

@@ -61,7 +61,7 @@ the [settlement kernel](/settlement).
 | [Deterministic randomness](randomness.md) | Seeded streams, event-keyed rolls, and permutations |
 | [Scoring and budgets](scoring.md) | Threshold scoring, failure precedence, and threshold suggestions |
 | [Solver](solver.md) | Breadth-first minimum-action search over an injected reducer |
-| [Replay verification](replay.md) | Transcript permutation checks and deterministic re-simulation |
+| [Portable replay and verification](replay.md) | Cross-platform JSONL evidence, transcript permutation checks, and multi-level deterministic re-simulation |
 | [High-frequency turns](/high-frequency) | Tick fast paths, sparse inputs, rollback, digests, frame skip, and multi-agent orchestration |
 
 ## Product integration showcases
