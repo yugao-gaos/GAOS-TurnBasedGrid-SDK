@@ -13,10 +13,13 @@ The repository contains six layers:
 - a genre-neutral v1 turn envelope, cursor, retry, and simultaneous-intent
   protocol;
 - Arena-specific clients and observation types for the hosted grid game;
-- reusable movement, settlement, pathfinding, sight geometry, scoring,
-  solving, and replay verification through the `./engine` package subpath;
-- deterministic agent episodes with concrete action discovery, Gym-style
-  termination, rewards, transcripts, batch evaluation, and portable tools;
+- reusable layouts, movement, settlement, turn order, information partitions,
+  zones, card composition, portals, pathfinding, pattern matching, lockstep
+  re-simulation, scoring, solving, and replay verification through the
+  `./engine` package subpath;
+- deterministic single- and multi-agent episodes with concrete action
+  discovery, frame skip, Gym-style termination, per-seat rewards, transcripts,
+  batch evaluation, and portable tools;
 - extensible keyed-model drivers for Anthropic, OpenAI, xAI, and OpenRouter;
 - reusable launch recipes and a standalone CLI for Claude Code, Ollama-backed
   Claude Code, Codex, Cursor, Grok, OpenCode, and declarative custom agents.
@@ -60,7 +63,7 @@ Session ID are collected in [DEVPOST.md](DEVPOST.md).
 
 - **Source:** https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK
 - **Documentation:** https://yugao-gaos.github.io/GAOS-TurnBasedGrid-SDK/
-- **Release:** https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK/releases/tag/v0.12.0
+- **Release:** https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK/releases/tag/v0.16.0
 - **Community:** https://discord.gg/vdvUgcqPU
 - **Live game and prebuilt download:** https://zonoid.ai
 
@@ -74,7 +77,7 @@ TypeScript / Node.js:
 mkdir gaos-judge
 cd gaos-judge
 npm init -y
-npm install 'https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK/releases/download/v0.12.0/yugao-gaos-turn-based-grid-sdk-0.12.0.tgz'
+npm install 'https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK/releases/download/v0.16.0/yugao-gaos-turn-based-grid-sdk-0.16.0.tgz'
 node --input-type=module -e "import { scoreStars } from '@yugao-gaos/turn-based-grid-sdk/engine'; console.log(scoreStars(6, { three: 6, two: 9 }))"
 ```
 
@@ -84,7 +87,7 @@ Python:
 
 ```sh
 python3 -m venv .venv
-.venv/bin/python -m pip install 'https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK/releases/download/v0.12.0/gaos_turn_based_grid_sdk-0.12.0-py3-none-any.whl'
+.venv/bin/python -m pip install 'https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK/releases/download/v0.16.0/gaos_turn_based_grid_sdk-0.16.0-py3-none-any.whl'
 .venv/bin/python -c "import agilabs_arena; print(agilabs_arena.__name__)"
 ```
 
@@ -152,8 +155,9 @@ The detailed evidence, key decisions, and human approval boundaries are in
 actions. Products may additionally expose semantic `systemActions` such as
 Restart; those controls remain separate from hidden, shuffled, or
 state-filtered gameplay actions but are valid agent choices. The environment
-validates either kind, applies the injected reducer once, and returns the
-scoring result with transcript-ready metrics.
+validates either kind, applies the injected reducer once per recorded tick
+(or across the configured frame skip), and returns the scoring result with
+transcript-ready metrics.
 
 ## TypeScript
 
@@ -173,7 +177,7 @@ Repositories with GitHub access can instead pin an exact release tag without
 configuring the npm registry:
 
 ```sh
-npm install 'git+https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK.git#v0.12.0'
+npm install 'git+https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK.git#v0.16.0'
 ```
 
 Use the hosted Arena client:
@@ -209,21 +213,28 @@ hosted Arena client:
 
 ```ts
 import {
+  deriveSeatView,
   evaluateBehaviorTree,
+  findPatterns,
+  planPortalTransits,
   planPushChain,
+  planZoneTransfer,
   resolveGateTransition,
   resolveMoves,
   resolveChainReaction,
   runSettlementCascade,
   scoreStars,
-  solveGridLevel,
+  solveLevel,
+  stateDigest,
 } from '@yugao-gaos/turn-based-grid-sdk/engine';
 ```
 
-The product supplies its reducer, levels, character catalog, ability data, and
+The product supplies its reducer, authored content, legality, effects, and
 scoring thresholds. See [Engine boundary](docs/engine.md) for the ownership and
-adapter contracts, and [Deterministic turn settlement](docs/settlement.md) for
-multi-step same-turn consequence resolution.
+adapter contracts, the [mechanism reference](docs/mechanisms/index.md) for
+zones, portals, layouts, and interactions, and [Deterministic turn
+settlement](docs/settlement.md) for multi-step same-turn consequence
+resolution.
 
 Run an agent locally against any injected deterministic reducer:
 
@@ -291,7 +302,7 @@ The distribution is named `gaos-turn-based-grid-sdk`; the stable import name
 remains `agilabs_arena` for compatibility with existing integrations.
 
 ```sh
-pip install gaos_turn_based_grid_sdk-0.12.0-py3-none-any.whl
+pip install gaos_turn_based_grid_sdk-0.16.0-py3-none-any.whl
 ```
 
 ```python

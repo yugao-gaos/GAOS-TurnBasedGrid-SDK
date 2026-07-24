@@ -78,7 +78,7 @@ describe('AgentEnvironment', () => {
     expect(final.info).toMatchObject({ steps: 2, totalReward: 3, terminationReason: 'won' });
     expect(final.legalActions).toEqual([]);
     expect(env.transcript()).toMatchObject({
-      version: '1.0',
+      version: '1.2',
       seed: 42,
       actions: [
         { n: 1, action: { id: 'advance' }, reward: 0 },
@@ -165,6 +165,13 @@ describe('agent tool adapter', () => {
     const tools = createAgentToolAdapter(env);
     expect(tools.definitions.map(({ name }) => name)).toEqual([
       'observe', 'act', 'reset', 'transcript',
+    ]);
+    const actSchema = tools.definitions.find(({ name }) => name === 'act')!
+      .inputSchema as {
+        properties: { action: { properties: Record<string, unknown> } };
+      };
+    expect(Object.keys(actSchema.properties.action.properties)).toEqual([
+      'id', 'x', 'y', 'index', 'boardId', 'zoneId', 'seat', 'targets',
     ]);
     expect(tools.call('reset', { seed: 7 })).toMatchObject({ info: { seed: 7 } });
     expect(tools.call('act', { action: { id: 'jump', index: 2 } }))

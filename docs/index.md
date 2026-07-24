@@ -3,7 +3,7 @@ layout: home
 
 hero:
   name: Gaming AGI Open SDK
-  tagline: A turn-based grid toolkit for games as benchmarks for human and AI agents.
+  tagline: A deterministic tabletop toolkit for games as benchmarks for human and AI agents.
   actions:
     - theme: brand
       text: Start building
@@ -12,12 +12,12 @@ hero:
       text: Explore the engine
       link: /mechanisms/
     - theme: alt
-      text: Why games?
-      link: /mission
+      text: What's new in v0.16
+      link: /version-history
 
 features:
   - title: Deterministic by construction
-    details: Resolve simultaneous movement, consequence cascades, transport, projectiles, gates, triggers, rays, and scoring with replayable outcomes.
+    details: Resolve turn order, hidden information, zones, portals, movement, consequence cascades, lockstep inputs, and scoring with replayable outcomes.
   - title: AI-native, not AI-attached
     details: Expose concrete legal actions, deterministic seeds, transcripts, batch evaluation, model drivers, and MCP-capable CLI launchers from one environment contract.
   - title: Product-neutral mechanisms
@@ -35,7 +35,8 @@ features:
   ></iframe>
 </div>
 
-**Deterministic grid mechanics and multiplayer infrastructure for agent-ready games.**
+**Deterministic tabletop mechanisms and multiplayer infrastructure for
+agent-ready games.**
 
 ## Our mission
 
@@ -76,9 +77,47 @@ Product reducer + authored content
 |---|---|---|---|
 | `position: 1`<br>`status: playing`<br>`actionsUsed: 1` | `{ id: 'advance' }`<br>`{ id: 'jump', index: 2 }` | `{ id: 'jump', index: 2 }` | `position: 3` → **won**<br>`reward: +3` · `totalReward: 3` · **3★** |
 
-`AgentEnvironment` exposes the product state and concrete legal actions,
-validates the agent's choice, applies the injected reducer once, and returns
-the scoring result with transcript-ready metrics.
+`AgentEnvironment` exposes the product state—or one seat's redacted view—and
+concrete legal actions, validates the agent's choice, applies the injected
+reducer at each recorded tick, and returns the result with transcript-ready
+metrics.
+
+## New in the tabletop mechanism suite
+
+<div class="mechanism-grid">
+  <a class="mechanism-card" href="./mechanisms/zones-and-card-play">
+    <span class="mechanism-kicker">Collections</span>
+    <h3>Zones and card play</h3>
+    <p>Decks, hands, queues, bags, slot rows, atomic transfers, dealing, keyword layers, priority, targets, durations, and deck validation.</p>
+  </a>
+  <a class="mechanism-card" href="./mechanisms/portals">
+    <span class="mechanism-kicker">Hybrid worlds</span>
+    <h3>Portals</h3>
+    <p>Move entities atomically across heterogeneous boards and zones with groups, capacity, transformations, cycles, and bounded multi-hop traversal.</p>
+  </a>
+  <a class="mechanism-card" href="./mechanisms/information-partitions">
+    <span class="mechanism-kicker">Honest observations</span>
+    <h3>Hidden information</h3>
+    <p>Per-seat views, hidden hands, independent identity and order visibility, fog-of-war, teams, revelations, spectators, and leak checks.</p>
+  </a>
+  <a class="mechanism-card" href="./mechanisms/locations-and-layouts">
+    <span class="mechanism-kicker">Tabletop geometry</span>
+    <h3>Layouts and locations</h3>
+    <p>Stable cross-container addresses plus square, axial-hex, directed-graph, multi-board, pathfinding, line-of-sight, and keyed movement support.</p>
+  </a>
+  <a class="mechanism-card" href="./high-frequency">
+    <span class="mechanism-kicker">Fast deterministic play</span>
+    <h3>Lockstep and rollback</h3>
+    <p>Canonical tick inputs, sparse transcripts, resimulation, state digests, frame skip, and authoritative hidden-information deployment.</p>
+  </a>
+  <a class="mechanism-card" href="./agentic-play">
+    <span class="mechanism-kicker">Model vs. model</span>
+    <h3>Multi-agent episodes</h3>
+    <p>Seat-redacted policies, simultaneous atomic batches, legal default waits, per-seat rewards, and one shared verifiable transcript.</p>
+  </a>
+</div>
+
+[See the complete version history →](/version-history)
 
 ## Built with GAOS
 

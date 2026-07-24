@@ -1,4 +1,4 @@
-import type { GridTurnView } from '../engine/contracts.js';
+import type { TurnView } from '../engine/contracts.js';
 import type {
   AgentEnvironment,
   AgentTranscript,
@@ -6,14 +6,14 @@ import type {
 } from '../engine/agent-environment.js';
 import type { AgentDecision, AgentDriver } from './driver.js';
 
-export interface AgentDriverEpisodeResult<TLevel, TView extends GridTurnView> {
+export interface AgentDriverEpisodeResult<TLevel, TView extends TurnView<unknown, unknown>> {
   finalTurn: AgentTurn<TView>;
-  transcript: AgentTranscript<TLevel>;
+  transcript: AgentTranscript<TLevel, TView>;
   decisions: AgentDecision[];
 }
 
 /** Run one complete deterministic environment episode through an AgentDriver. */
-export async function runAgentDriverEpisode<TLevel, TState, TView extends GridTurnView>(
+export async function runAgentDriverEpisode<TLevel, TState, TView extends TurnView<unknown, unknown>>(
   environment: AgentEnvironment<TLevel, TState, TView>,
   driver: AgentDriver<TView>,
   options: {

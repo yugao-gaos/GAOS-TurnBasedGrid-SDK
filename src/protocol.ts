@@ -158,6 +158,34 @@ export interface IntentWindow<TCommand = unknown> extends TurnCursor {
   intents: Record<string, CollectedIntent<TCommand>>;
 }
 
+/** Structural counterpart of the engine participation descriptor. */
+export type IntentParticipation =
+  | { mode: 'sequential'; activeSeat: string }
+  | { mode: 'simultaneous'; seats: readonly string[] };
+
+/**
+ * Map one engine collection turn to the protocol's eligible participant set.
+ * Sequential play creates a one-seat window; simultaneous play includes every
+ * declared seat. Portable seat-id validation is delegated to the normal
+ * intent-window constructor.
+ */
+export function createParticipationIntentWindow<TCommand>(
+  sessionId: string,
+  revision: number,
+  participation: IntentParticipation,
+): IntentWindow<TCommand> {
+  if (!participation || typeof participation !== 'object') {
+    throw new TypeError('participation descriptor must be an object');
+  }
+  if (participation.mode === 'sequential') {
+    return createIntentWindow(sessionId, revision, [participation.activeSeat]);
+  }
+  if (participation.mode === 'simultaneous') {
+    return createIntentWindow(sessionId, revision, participation.seats);
+  }
+  throw new TypeError('participation mode must be sequential or simultaneous');
+}
+
 function hasIntent<TCommand>(window: IntentWindow<TCommand>, participantId: string): boolean {
   return Object.prototype.hasOwnProperty.call(window.intents, participantId);
 }

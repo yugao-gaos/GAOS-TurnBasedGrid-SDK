@@ -64,6 +64,34 @@ describe('agent driver contracts', () => {
         action: { id: 'jump', index: 2 },
       });
   });
+
+  it('preserves board and zone addressing in model decisions', () => {
+    expect(parseAgentDecision(
+      '{"action":{"id":"deploy","x":2,"y":3,"boardId":"arena","zoneId":"hand"}}',
+    )).toEqual({
+      action: {
+        id: 'deploy',
+        x: 2,
+        y: 3,
+        boardId: 'arena',
+        zoneId: 'hand',
+      },
+    });
+  });
+
+  it('parses cross-container declarative target selections', () => {
+    expect(parseAgentDecision(
+      '{"action":{"id":"choose","targets":[{"container":"board","coord":[2,3]},{"container":"hand","coord":1}]}}',
+    )).toEqual({
+      action: {
+        id: 'choose',
+        targets: [
+          { container: 'board', coord: [2, 3] },
+          { container: 'hand', coord: 1 },
+        ],
+      },
+    });
+  });
 });
 
 describe('keyed providers', () => {

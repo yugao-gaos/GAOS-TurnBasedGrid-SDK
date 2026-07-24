@@ -1,5 +1,6 @@
-import type { GridSubmittedAction, GridTurnView } from './contracts.js';
+import type { SubmittedAction, TurnView } from './contracts.js';
 import type { AgentEnvironment } from './agent-environment.js';
+import { locationKey } from './locations.js';
 
 export type AgentToolName = 'observe' | 'act' | 'reset' | 'transcript';
 
@@ -33,6 +34,32 @@ export const AGENT_TOOL_DEFINITIONS: readonly AgentToolDefinition[] = [
             x: { type: 'integer' },
             y: { type: 'integer' },
             index: { type: 'integer' },
+            boardId: { type: 'string', minLength: 1 },
+            zoneId: { type: 'string', minLength: 1 },
+            seat: { type: 'string', minLength: 1 },
+            targets: {
+              type: 'array',
+              items: {
+                type: 'object',
+                required: ['container', 'coord'],
+                additionalProperties: false,
+                properties: {
+                  container: { type: 'string', minLength: 1 },
+                  coord: {
+                    anyOf: [
+                      { type: 'integer' },
+                      { type: 'string' },
+                      {
+                        type: 'array',
+                        minItems: 2,
+                        maxItems: 2,
+                        items: { type: 'integer' },
+                      },
+                    ],
+                  },
+                },
+              },
+            },
           },
         },
       },
@@ -61,17 +88,41 @@ function record(value: unknown): Record<string, unknown> {
   return value as Record<string, unknown>;
 }
 
-function parseAction(value: unknown): GridSubmittedAction {
+function parseAction(value: unknown): SubmittedAction {
   const input = record(value);
   if (typeof input.id !== 'string' || input.id.length === 0) {
     throw new TypeError('action.id must be a non-empty string');
   }
-  const action: GridSubmittedAction = { id: input.id };
+  const action: SubmittedAction = { id: input.id };
   for (const key of ['x', 'y', 'index'] as const) {
     if (input[key] !== undefined) {
       if (!Number.isInteger(input[key])) throw new TypeError(`action.${key} must be an integer`);
       action[key] = input[key] as number;
     }
+  }
+  for (const key of ['boardId', 'zoneId', 'seat'] as const) {
+    if (input[key] !== undefined) {
+      if (typeof input[key] !== 'string' || input[key].length === 0) {
+        throw new TypeError(`action.${key} must be a non-empty string`);
+      }
+      action[key] = input[key];
+    }
+  }
+  if (input.targets !== undefined) {
+    if (!Array.isArray(input.targets)) throw new TypeError('action.targets must be an array');
+    action.targets = input.targets.map((value, index) => {
+      const target = record(value);
+      const location = {
+        container: target.container,
+        coord: target.coord,
+      } as SubmittedAction['targets'] extends readonly (infer T)[] | undefined ? T : never;
+      try {
+        locationKey(location);
+      } catch (error) {
+        throw new TypeError(`action.targets[${index}] is invalid`, { cause: error });
+      }
+      return location;
+    });
   }
   return action;
 }
@@ -82,7 +133,7 @@ export interface AgentToolAdapter {
 }
 
 /** Bind the standard agent tools to one environment without an MCP dependency. */
-export function createAgentToolAdapter<TLevel, TState, TView extends GridTurnView>(
+export function createAgentToolAdapter<TLevel, TState, TView extends TurnView<unknown, unknown>>(
   environment: AgentEnvironment<TLevel, TState, TView>,
 ): AgentToolAdapter {
   return {

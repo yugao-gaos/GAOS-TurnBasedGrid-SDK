@@ -1,6 +1,11 @@
-import type { GridReducer, GridSubmittedAction, GridTurnView } from './contracts.js';
+import type { SubmittedAction, TurnReducer, TurnView } from './contracts.js';
+import type { LocationRef } from './locations.js';
+import { locationKey } from './locations.js';
+import { applyCanonicalActions } from './lockstep.js';
 
-export interface GridTranscriptHeader<TLevel> {
+export type TranscriptVisibility = 'full' | `seat:${string}`;
+
+export interface TranscriptHeader<TLevel> {
   sessionId: string;
   level: TLevel;
   seed: number;
@@ -9,30 +14,49 @@ export interface GridTranscriptHeader<TLevel> {
   status: 'won' | 'failed';
   stars: number | null;
   actionsUsed: number;
+  /** Absent means `full` for v0.12/v0.13 transcript compatibility. */
+  visibility?: TranscriptVisibility;
 }
 
-export interface GridTranscriptAction {
+export interface TranscriptAction {
   n: number;
   wireId: string;
   canonicalId: string;
   x?: number;
   y?: number;
   index?: number;
+  boardId?: string;
+  zoneId?: string;
+  seat?: string;
+  targets?: readonly LocationRef[];
+  /** High-frequency turn/tick. Empty ticks between records are omitted. */
+  tick?: number;
 }
 
-export interface GridRecheckResult {
+export interface RecheckResult {
   ok: boolean;
   problems: string[];
   replayed: { status: string; stars: number | null; actionsUsed: number };
 }
 
+export interface RecheckOptions<TState> {
+  /** Product-owned scheduled work for omitted all-wait ticks. */
+  applyEmptyTick?: (state: TState, tick: number) => TState;
+}
+
 /** Re-simulate a transcript and compare its deterministic recorded outcome. */
-export function recheckGridTranscript<TLevel, TState, TView extends GridTurnView>(
-  reducer: GridReducer<TLevel, TState, TView>,
-  header: GridTranscriptHeader<TLevel>,
-  actions: GridTranscriptAction[],
-): GridRecheckResult {
+export function recheckTranscript<TLevel, TState, TView extends TurnView<unknown, unknown>>(
+  reducer: TurnReducer<TLevel, TState, TView>,
+  header: TranscriptHeader<TLevel>,
+  actions: TranscriptAction[],
+  options: RecheckOptions<TState> = {},
+): RecheckResult {
   const problems: string[] = [];
+  if (header.visibility !== undefined
+    && (typeof header.visibility !== 'string'
+      || (header.visibility !== 'full' && !/^seat:.+/.test(header.visibility)))) {
+    problems.push('visibility must be full or seat:<id>');
+  }
   const validSeed = Number.isSafeInteger(header.seed) && header.seed >= 0 && header.seed <= 0xffff_ffff;
   if (!validSeed) problems.push('seed must be an unsigned 32-bit integer');
   const permutation: unknown[] = Array.isArray(header.perm) ? header.perm : [];
@@ -55,12 +79,13 @@ export function recheckGridTranscript<TLevel, TState, TView extends GridTurnView
   if (actionValues.length > 0 && sequenceBase === undefined) {
     problems.push('action numbering must start at 0 or 1');
   }
+  let inferredTick = 0;
   const parsedActions = actionValues.map((value, offset) => {
     if (!value || typeof value !== 'object' || Array.isArray(value)) {
       problems.push(`action at index ${offset} must be an object`);
-      return { action: undefined, valid: false };
+      return { action: undefined, valid: false, effectiveTick: inferredTick };
     }
-    const action = value as Partial<GridTranscriptAction>;
+    const action = value as Partial<TranscriptAction>;
     if (!Number.isSafeInteger(action.n) || sequenceBase === undefined || action.n !== sequenceBase + offset) {
       problems.push(`action at index ${offset} has non-contiguous sequence number ${String(action.n)}`);
     }
@@ -77,9 +102,41 @@ export function recheckGridTranscript<TLevel, TState, TView extends GridTurnView
       }
       return number - 1;
     };
-    for (const field of ['x', 'y', 'index'] as const) {
+    for (const field of ['x', 'y', 'index', 'tick'] as const) {
       if (action[field] !== undefined && !Number.isSafeInteger(action[field])) {
         problems.push(`action ${String(action.n)} ${field} must be a safe integer`);
+      }
+    }
+    if (Number.isSafeInteger(action.tick) && action.tick! < 0) {
+      problems.push(`action ${String(action.n)} tick must be non-negative`);
+    }
+    if (action.tick !== undefined && Number.isSafeInteger(action.tick) && action.tick >= 0) {
+      if (action.tick < inferredTick) {
+        problems.push(`action ${String(action.n)} tick must not precede the previous action`);
+      } else {
+        inferredTick = action.tick;
+      }
+    }
+    for (const field of ['boardId', 'zoneId', 'seat'] as const) {
+      if (action[field] !== undefined
+        && (typeof action[field] !== 'string' || action[field].length === 0)) {
+        problems.push(`action ${String(action.n)} ${field} must be a non-empty string`);
+      }
+    }
+    let validTargets = true;
+    if (action.targets !== undefined) {
+      if (!Array.isArray(action.targets)) {
+        problems.push(`action ${String(action.n)} targets must be an array`);
+        validTargets = false;
+      } else {
+        for (const [index, target] of action.targets.entries()) {
+          try {
+            locationKey(target);
+          } catch {
+            problems.push(`action ${String(action.n)} target ${index} is invalid`);
+            validTargets = false;
+          }
+        }
       }
     }
     const wire = parseId(action.wireId, 'wireId');
@@ -90,30 +147,61 @@ export function recheckGridTranscript<TLevel, TState, TView extends GridTurnView
         `action ${action.n}: wire ${action.wireId} → ${action.canonicalId} contradicts the session permutation`,
       );
     }
-    return { action: action as GridTranscriptAction, valid: wire !== undefined && canonical !== undefined
-      && ['x', 'y', 'index'].every((field) => (
-        action[field as 'x' | 'y' | 'index'] === undefined
-        || Number.isSafeInteger(action[field as 'x' | 'y' | 'index'])
-      )) };
+    return { action: action as TranscriptAction, effectiveTick: inferredTick,
+      valid: wire !== undefined && canonical !== undefined
+      && ['x', 'y', 'index', 'tick'].every((field) => (
+        action[field as 'x' | 'y' | 'index' | 'tick'] === undefined
+        || (Number.isSafeInteger(action[field as 'x' | 'y' | 'index' | 'tick'])
+          && (field !== 'tick' || action.tick! >= 0))
+      ))
+      && ['boardId', 'zoneId', 'seat'].every((field) => (
+        action[field as 'boardId' | 'zoneId' | 'seat'] === undefined
+        || (typeof action[field as 'boardId' | 'zoneId' | 'seat'] === 'string'
+          && action[field as 'boardId' | 'zoneId' | 'seat']!.length > 0)
+      ))
+      && validTargets };
   });
 
   let state = reducer.init(header.level, validSeed ? header.seed : 0);
   let replayError: string | null = null;
-  for (const { action, valid } of parsedActions) {
+  let lastTick = -1;
+  for (const { action, valid, effectiveTick } of parsedActions) {
     if (!action) continue;
+    if (effectiveTick > lastTick) {
+      if (options.applyEmptyTick) {
+        try {
+          for (let tick = lastTick + 1; tick < effectiveTick; tick++) {
+            state = options.applyEmptyTick(state, tick);
+          }
+        } catch (error) {
+          replayError = `empty tick before action ${action.n} rejected on replay: ${(error as Error).message}`;
+          break;
+        }
+      }
+      lastTick = effectiveTick;
+    }
     if (reducer.view(state).status !== 'playing') {
       problems.push(`action ${action.n} appears after terminal state`);
       break;
     }
     if (!valid) continue;
-    const submitted: GridSubmittedAction = {
+    const submitted: SubmittedAction = {
       id: action.canonicalId,
       ...(action.x !== undefined ? { x: action.x } : {}),
       ...(action.y !== undefined ? { y: action.y } : {}),
       ...(action.index !== undefined ? { index: action.index } : {}),
+      ...(action.boardId !== undefined ? { boardId: action.boardId } : {}),
+      ...(action.zoneId !== undefined ? { zoneId: action.zoneId } : {}),
+      ...(action.seat !== undefined ? { seat: action.seat } : {}),
+      ...(action.targets !== undefined ? {
+        targets: action.targets.map((target) => ({
+          container: target.container,
+          coord: Array.isArray(target.coord) ? [...target.coord] : target.coord,
+        })),
+      } : {}),
     };
     try {
-      state = reducer.apply(state, submitted);
+      state = applyCanonicalActions(reducer, state, [submitted], false);
     } catch (error) {
       replayError = `action ${action.n} (${action.canonicalId}) rejected on replay: ${(error as Error).message}`;
       break;
@@ -147,3 +235,15 @@ export function recheckGridTranscript<TLevel, TState, TView extends GridTurnView
 export function runLevelSeed(sessionSeed: number, levelIndex: number): number {
   return (sessionSeed ^ (0x9e3779b9 * (levelIndex + 1))) >>> 0;
 }
+
+/** @deprecated Renamed to `TranscriptHeader`; this alias will be removed in v1.0. */
+export type GridTranscriptHeader<TLevel> = TranscriptHeader<TLevel>;
+
+/** @deprecated Renamed to `TranscriptAction`; this alias will be removed in v1.0. */
+export type GridTranscriptAction = TranscriptAction;
+
+/** @deprecated Renamed to `RecheckResult`; this alias will be removed in v1.0. */
+export type GridRecheckResult = RecheckResult;
+
+/** @deprecated Renamed to `recheckTranscript`; this alias will be removed in v1.0. */
+export const recheckGridTranscript = recheckTranscript;

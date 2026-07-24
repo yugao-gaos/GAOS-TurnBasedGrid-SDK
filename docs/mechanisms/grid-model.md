@@ -1,8 +1,8 @@
-# Grid model and reducer contract
+# Turn model and reducer contract
 
-The SDK uses a deliberately small grid vocabulary. It does not define terrain
-tokens, entity schemas, level files, or a complete world state. Products expose
-those concepts through the generic reducer and turn-view contracts.
+The SDK uses a genre-neutral reducer and turn-view vocabulary. It does not
+define terrain tokens, card schemas, level files, or a complete world state.
+Products expose those concepts through the generic contracts.
 
 ## Coordinates
 
@@ -22,9 +22,12 @@ CARDINAL_VECTORS.left  // [-1,  0]
 CARDINAL_VECTORS.right // [ 1,  0]
 ```
 
-Boards used by geometry helpers are zero-based rectangles:
+Square boards used by the legacy geometry helpers are zero-based rectangles:
 `0 <= x < width` and `0 <= y < height`. Movement itself has no board size; its
 `isStaticBlocked` callback must reject out-of-bounds cells.
+
+For square, axial-hex, graph, and multi-board games, use
+[locations and layouts](locations-and-layouts.md).
 
 Treat cells stored in state as values. Copy a tuple before retaining it if a
 product might mutate the original array.
@@ -34,54 +37,77 @@ product might mutate the original array.
 Reusable solving, replay, and agent execution consume the same adapter:
 
 ```ts
-interface GridReducer<TLevel, TState, TView extends GridTurnView> {
+interface TurnReducer<TLevel, TState, TView extends TurnView> {
   init(level: TLevel, seed: number): TState;
-  apply(state: TState, action: GridSubmittedAction): TState;
+  apply(state: TState, action: SubmittedAction): TState;
   view(state: TState): TView;
+  viewFor?(state: TState, seat: string): TView;
+  applyIntents?(state: TState, actions: readonly SubmittedAction[]): TState;
 }
 ```
 
 - `init` must create the same initial state for the same level and seed.
 - `apply` validates and resolves one canonical action. It should throw for an
   illegal submission.
-- `view` exposes only the observation and legal-action surface needed by SDK
-  consumers.
+- `view` exposes the complete or single-seat observation and legal-action
+  surface needed by SDK consumers.
+- `viewFor` optionally derives the observation authorized for one seat. See
+  [information partitions](information-partitions.md).
+- `applyIntents` optionally resolves one simultaneous multi-seat batch
+  atomically. Sequential and solo reducers can omit it.
 
-When using the solver, `apply` must not corrupt its input state: several sibling
-actions are explored from the same parent. Return an independent state, use
-persistent data structures, or clone before mutation.
+The reducer contract requires determinism, not persistent immutability.
+High-frequency products may mutate in place with copy-on-write rollback
+deltas. When using the solver, however, `apply` must not corrupt its input:
+several sibling actions are explored from the same parent. Return an
+independent state, use persistent data structures, or snapshot before mutation.
+
+An empty-intent tick should use a near-free path and advance only scheduled
+systems whose explicit boundary is crossed. Wall-clock time is never implicit
+state input; see [high-frequency turns](/high-frequency).
 
 ## Actions
 
-An action definition declares one of three parameter shapes:
+An action definition declares one of four parameter shapes:
 
 | `params` | Submission | Values are discovered from |
 |---|---|---|
 | `none` | `{ id }` | No additional data |
-| `index` | `{ id, index }` | Items, dialogue options, and points of interest |
-| `xy` | `{ id, x, y }` | Per-action targets, then the shared target list |
+| `index` | `{ id, index, zoneId? }` | Items, dialogue options, points of interest, and product zones |
+| `xy` | `{ id, x, y, boardId? }` | Per-action targets, then the shared target list |
+| `targets` | `{ id, targets }` | A complete non-truncated `targetChoices[targetSpecId]` set |
 
 ```ts
-const action: GridSubmittedAction = {
+const action: SubmittedAction = {
   id: 'Action 4',
   x: 3,
   y: 2,
+  boardId: 'arena',
 };
 ```
 
-Action ids in the reducer are canonical. A hosted protocol may permute their
+Multi-seat hosts may attach `seat` to any submission. Action ids in the reducer
+are canonical. A hosted protocol may permute their
 wire labels for an agent; [replay verification](replay.md) checks that mapping
 before re-simulation.
 
 ## Turn observations
 
-`GridTurnView` provides:
+`TurnView` provides:
 
 - legal action definitions;
 - status: `playing`, `won`, or `failed`;
 - an optional star result;
 - `hud.actionsUsed`; and
-- optional indexed choices and targetable cells.
+- optional indexed choices;
+- optional sequential or simultaneous `participation`;
+- optional multi-seat `outcome`, including rankings and ties;
+- optional `activeSeat` as sequential compatibility sugar;
+- optional partition-filtered `zones`; and
+- optional spatial targeting under `grid`, either for one implicit board or a
+  record keyed by board id; and
+- optional declarative target-choice sets, including an explicit truncation
+  marker.
 
 Products may extend the view with a board, entities, inventory, objectives,
 events, or any other observation. Generic SDK algorithms ignore those extra
@@ -102,7 +128,7 @@ validation, rules, content, serialization, and authoritative persistence.
 
 ## Zonoid example
 
-Zonoid implements one universal `GridReducer` for Object Delivery, Object
+Zonoid implements one universal `TurnReducer` for Object Delivery, Object
 Usage, Signal Language, The Breach, Intelligence Lies, and Jailbreak Protocol.
 The reducer initializes a product `World`, applies the canonical move/use/talk/
 inspect actions, and exposes a redacted `TurnView`; the same adapter is used by

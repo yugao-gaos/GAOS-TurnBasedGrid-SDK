@@ -6,7 +6,7 @@ import {
   runAgentDriverEpisode,
 } from '../agent/index.js';
 import type { AgentEnvironment } from '../engine/agent-environment.js';
-import type { GridTurnView } from '../engine/contracts.js';
+import type { TurnView } from '../engine/contracts.js';
 import { createDefaultCliAgentRegistry } from './specs.js';
 import { inspectCliAgent } from './status.js';
 import { spawnCliAgent } from './spawn.js';
@@ -170,7 +170,8 @@ async function spawnAgent(args: ParsedArguments, io: AgentCliIO): Promise<number
 
 type EnvironmentFactory = (options: {
   seed?: number;
-}) => AgentEnvironment<unknown, unknown, GridTurnView> | Promise<AgentEnvironment<unknown, unknown, GridTurnView>>;
+}) => AgentEnvironment<unknown, unknown, TurnView<unknown, unknown>>
+  | Promise<AgentEnvironment<unknown, unknown, TurnView<unknown, unknown>>>;
 
 async function runKeyed(args: ParsedArguments, io: AgentCliIO): Promise<number> {
   assertOptions(args.options, ['module', 'model', 'seed', 'prompt']);
@@ -189,7 +190,7 @@ async function runKeyed(args: ParsedArguments, io: AgentCliIO): Promise<number> 
   if (!environment || typeof environment.reset !== 'function' || typeof environment.step !== 'function') {
     throw new TypeError('createEnvironment did not return an AgentEnvironment-compatible object');
   }
-  const driver = createKeyedAgentDriver<GridTurnView>(provider.id, {
+  const driver = createKeyedAgentDriver<TurnView<unknown, unknown>>(provider.id, {
     apiKey,
     model: args.options.get('model'),
   });

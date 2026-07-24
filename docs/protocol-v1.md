@@ -51,6 +51,12 @@ serially.
 The host is responsible for atomically committing the resolution, its retry
 receipt, and the next intent window.
 
+`createParticipationIntentWindow` maps the engine participation descriptor to
+the protocol collector: sequential participation creates a one-seat eligible
+set, while simultaneous participation includes every declared seat. This is
+the same intent-collection model used by response windows and multi-agent
+episodes.
+
 ## Game definitions
 
 `GameDefinition` is an optional host-side seam for deterministic games. A game
@@ -66,6 +72,11 @@ game to coexist in one host process.
 Participant IDs identify seats, not credentials. Authentication,
 authorization, persistence, timeout policy, reconnect behavior, rate limits,
 scoring, and replay retention belong to the host.
+
+This hosted HTTP-style envelope is not a high-frequency lockstep transport.
+Realtime products bring their own WebRTC, relay, or socket layer and use the
+engine's canonical tick inputs, rollback re-simulation, and state digests
+directly.
 
 ## Compatibility promise
 

@@ -1,14 +1,14 @@
-# Reusable grid engine
+# Reusable tabletop mechanism engine
 
 Import the engine through the dedicated package subpath:
 
 ```ts
 import {
   budgetFailure,
-  recheckGridTranscript,
+  recheckTranscript,
   resolveMoves,
   scoreStars,
-  solveGridLevel,
+  solveLevel,
 } from '@yugao-gaos/turn-based-grid-sdk/engine';
 ```
 
@@ -35,14 +35,26 @@ The SDK owns deterministic, product-neutral behavior:
   directed transport proposals/runs, connected link sources, and bounded
   transport/state interlocks, plus product-defined resource balances and atomic
   requirement/effect transactions;
-- shortest cardinal pathfinding, Bresenham traversal, line-of-sight checks, and
-  widening cone geometry through injected board/blocker policies;
+- square, axial-hex, and graph layouts; layout-parameterized pathfinding,
+  line-of-sight, and field geometry; and generic keyed movement;
+- deterministic sequential turn order, multi-seat participation/outcome
+  contracts, maximal run/motif recognition, canonical lockstep input ordering,
+  rollback re-simulation, and state digests;
+- per-seat observations, independent zone identity/order visibility, board fog,
+  team visibility conventions, spectator policy types, and leak assertions;
+- ordered, bag, and slotted zones with atomic transfer, shuffle, draw, and deal
+  operations; keyword layers, response priority, declarative targets,
+  durations, phases, and deck/loadout validation;
+- bounded portal transit across heterogeneous containers, including atomic
+  groups, destination capacity arbitration, transformations, and arrivals;
 - seeded random draws and permutations;
 - star scoring and an AI action-limit runtime guardrail;
 - breadth-first minimum-action solving over an injected deterministic reducer;
-- transcript re-simulation and deterministic per-level run seeds.
-- provider-neutral agent episode lifecycle, concrete action validation,
-  rewards, safety truncation, transcripts, and batch evaluation.
+- transcript re-simulation, optional tick gaps, and deterministic per-level run
+  seeds;
+- provider-neutral seat-aware single- and multi-agent episode lifecycles,
+  concrete action validation, frame skip, per-seat rewards, safety truncation,
+  transcripts, and batch evaluation.
 
 The product owns content and policy:
 
@@ -134,23 +146,26 @@ world/entity rules.
 
 ## Reducer adapter
 
-The solver and replay checker depend on `GridReducer<TLevel, TState>` rather
+The solver and replay checker depend on `TurnReducer<TLevel, TState>` rather
 than a Zonoid registry. A product adapter provides three pure operations:
 
 ```ts
-interface GridReducer<TLevel, TState> {
+interface TurnReducer<TLevel, TState> {
   init(level: TLevel, seed: number): TState;
-  apply(state: TState, action: GridSubmittedAction): TState;
-  view(state: TState): GridTurnView;
+  apply(state: TState, action: SubmittedAction): TState;
+  applyIntents?(state: TState, actions: readonly SubmittedAction[]): TState;
+  view(state: TState): TurnView;
+  viewFor?(state: TState, seat: string): TurnView;
 }
 ```
 
 This keeps campaign lookup, level schemas, and character catalogs outside the
 SDK while allowing the reusable algorithms to execute the product reducer.
 
-The same reducer adapter powers `AgentEnvironment`. A product therefore needs
-no second gameplay implementation for local agents, hosted sessions, solving,
-or deterministic replay.
+The same reducer adapter powers `AgentEnvironment` and
+`MultiAgentEnvironment`. `applyIntents` is required only when simultaneous
+multi-seat batches are used. A product therefore needs no second gameplay
+implementation for agents, hosted sessions, solving, or deterministic replay.
 
 ## Scoring configuration
 
