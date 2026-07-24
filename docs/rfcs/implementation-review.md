@@ -26,6 +26,7 @@ as a deprecated alias until the separately scheduled v1.0 boundary.
 | High-frequency accommodation | Sparse tick actions, canonical tick/seat/action order, empty-tick replay, rollback resimulation, state digests, reducer performance guidance | `test/information.test.ts`, `docs/high-frequency.md` | Complete |
 | Frame skip | Repeated or product-continuation actions, early illegal/terminal stop, every tick recorded, transcript v1.2 replay without double skipping | `test/multi-agent.test.ts` | Complete |
 | Multi-agent follow-up | Per-seat redacted turns/legal actions, default wait, canonical atomic `applyIntents`, concurrent policies, per-seat rewards/outcomes, shared replayable transcript | `test/multi-agent.test.ts` | Complete |
+| Cross-platform replay follow-up | SDK-owned self-identifying JSONL envelope, adapter/content versions, explicit per-level seeds, canonical serialization, strict parse, legacy transcript lift, whole-run recheck | `test/replay-format.test.ts`, `docs/mechanisms/replay.md` | Complete |
 | Known-gaps register | Team-ranked outcomes, team visibility, revelation records, seat lifecycle/time/id/spectator/P2P security guidance | `test/information.test.ts`, mechanism and high-frequency documentation | Complete |
 
 ## Determinism and atomicity findings
@@ -40,6 +41,8 @@ as a deprecated alias until the separately scheduled v1.0 boundary.
 - Target enumeration reports truncation. Generic agents and the solver reject
   a partial target surface rather than silently treating it as complete.
 - Replays preserve board, zone, seat, target, and tick addressing.
+- `gaos.replay` preserves those reducer inputs inside one portable single- or
+  multi-level evidence artifact that Arena and creator platforms can share.
 
 ## Compatibility and intentional boundaries
 

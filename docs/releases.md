@@ -3,6 +3,24 @@
 For the public chronological changelog, see the
 [complete version history](/version-history).
 
+## v0.17.0 — in development
+
+The v0.17 line begins by making replay evidence portable across products:
+
+- `gaos.replay` v1 defines one self-identifying JSONL header/action envelope
+  for single-level sessions and ordered multi-level runs;
+- headers pin game and reducer-adapter versions, explicit per-level seeds,
+  level definitions/results, action permutations, visibility, and totals;
+- canonical serialization, strict parsing, transport validation, and
+  whole-run reducer recheck are SDK-owned;
+- `transcriptToReplayArtifact` lifts existing single-level SDK transcripts;
+  and
+- `GAOS_REPLAY_MANIFEST_FORMAT` fills creator-platform
+  `results.replayFormat` declarations without another product-specific spec.
+
+This version is not released yet. Published installation examples continue to
+pin v0.16.0 until the v0.17.0 release is cut.
+
 ## v0.16.0
 
 The complete next-version batch is implemented. This release adds RFC-005

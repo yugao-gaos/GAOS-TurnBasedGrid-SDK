@@ -15,8 +15,8 @@ The repository contains six layers:
 - Arena-specific clients and observation types for the hosted grid game;
 - reusable layouts, movement, settlement, turn order, information partitions,
   zones, card composition, portals, pathfinding, pattern matching, lockstep
-  re-simulation, scoring, solving, and replay verification through the
-  `./engine` package subpath;
+  re-simulation, scoring, solving, and portable JSONL replay verification
+  through the `./engine` package subpath;
 - deterministic single- and multi-agent episodes with concrete action
   discovery, frame skip, Gym-style termination, per-seat rewards, transcripts,
   batch evaluation, and portable tools;
@@ -158,6 +158,43 @@ state-filtered gameplay actions but are valid agent choices. The environment
 validates either kind, applies the injected reducer once per recorded tick
 (or across the configured frame skip), and returns the scoring result with
 transcript-ready metrics.
+
+## Portable benchmark replays
+
+`gaos.replay` v1 is the SDK-owned evidence format shared by game hosts and
+benchmark tooling. Its JSONL header pins the game and historical reducer
+adapter, run seed, explicit per-level seeds and definitions, per-level results,
+and aggregate totals. Following lines are level-indexed `TranscriptAction`
+records.
+
+```ts
+import {
+  createReplayArtifact,
+  recheckReplayArtifact,
+  serializeReplayJsonl,
+} from '@yugao-gaos/turn-based-grid-sdk/engine';
+
+const artifact = createReplayArtifact({
+  sessionId: 'run-42',
+  game: {
+    id: 'creator/my-game',
+    version: '1.3.0',
+    adapter: { id: 'creator/my-game/reducer', version: 'commit:abc123' },
+  },
+  seed: 42,
+  perm: [0, 1],
+  levels,
+  actions,
+});
+
+const jsonl = serializeReplayJsonl(artifact);
+const checked = recheckReplayArtifact(artifact, reducerRegistry);
+```
+
+Arena runs and TabletopLabs creator games can therefore emit the same
+self-identifying artifact and be verified by the same SDK tooling. Existing
+single-level `TranscriptHeader` + `TranscriptAction` data lifts through
+`transcriptToReplayArtifact`.
 
 ## TypeScript
 

@@ -4,12 +4,26 @@ GAOS evolves additively across the v0.x line. Products can adopt new mechanism
 families independently, while deprecated compatibility names remain available
 until the v1.0 boundary.
 
-::: tip Current source: v0.16.0
-The latest batch expands GAOS from a grid-focused engine into a composable
-tabletop mechanism suite: heterogeneous boards, hidden information, zones,
-card-play composition, portals, high-frequency lockstep, and multi-agent
-episodes.
+::: tip Current source: v0.17.0 in development
+v0.16.0 remains the latest published release. Current source is building
+toward v0.17.0, beginning with an SDK-owned portable replay format shared by
+Arena, creator platforms, and independent benchmark tooling.
 :::
+
+## v0.17.0 — portable benchmark replays
+
+In development.
+
+- SDK-owned `gaos.replay` v1 JSONL envelope for both single-level sessions and
+  ordered multi-level runs.
+- Explicit per-level seeds, pinned content/results, reducer adapter identity,
+  aggregate totals, and level-indexed actions.
+- Canonical serialization, strict parsing, transport validation, whole-run
+  reducer recheck, and a direct TabletopLabs `results.replayFormat` constant.
+- Lossless adapter from the existing `TranscriptHeader`/`TranscriptAction`
+  pair, allowing Arena and creator-platform results to share verifier tooling.
+
+[Portable replay specification →](/mechanisms/replay)
 
 ## Tabletop mechanism suite
 

@@ -36,6 +36,13 @@ failure legible: Did the agent misunderstand the board, choose an illegal
 action, predict another actor incorrectly, waste resources, fail to adapt, or
 find a valid but inefficient plan?
 
+The portable unit of evidence is an SDK-owned replay, not a platform-specific
+database row. A TabletopLabs creator game can emit the same `gaos.replay` JSONL
+as a hosted Arena run, allowing either result to be parsed, routed to its pinned
+historical reducer, and verified by shared tooling. That is the benchmark
+mission in operational form: a game authored in one product becomes
+independently Arena-verifiable.
+
 ## Why games are a good approach
 
 ### They measure behavior over time

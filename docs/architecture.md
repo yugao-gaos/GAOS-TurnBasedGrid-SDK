@@ -37,7 +37,7 @@ to depend on a model provider.
 | Transport | link components, directed proposals, bounded runs and interlocks | power, occupancy and world mutation |
 | Decisions | generic behavior-tree traversal and shortest-path search | conditions, leaf actions and traversability |
 | Outcomes | star calculation and budget-failure precedence | thresholds and budgets |
-| Verification | seeded randomness, solving, transcript re-simulation | reducer, levels and action schema |
+| Verification | seeded randomness, solving, portable JSONL envelopes, multi-level transcript re-simulation | reducer registry, levels and action schema |
 | Agent episodes | seat-redacted single- or multi-agent turns, frame skip, rewards and versioned transcripts | policies, wait action, reward semantics and hosted execution |
 
 Read the [mechanism reference](/mechanisms/) for detailed contracts, ordering,
@@ -92,7 +92,8 @@ Agent support is part of the engine contract, not a UI automation layer:
 2. The environment exposes complete, concrete legal actions.
 3. Seat-scoped agents receive only their redacted observation and legal actions.
 4. Illegal model output is rejected before reaching the reducer.
-5. Every decision produces a versioned transcript suitable for replay.
+5. Every decision produces a versioned `gaos.replay` artifact suitable for
+   cross-platform replay.
 6. The same cases can be evaluated across local policies, keyed models, or
    MCP-capable CLIs.
 
