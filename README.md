@@ -1,4 +1,4 @@
-# GAOS Turn-Based Grid Toolkit
+# Gaming AGI Open SDK (GAOS)
 
 GAOS stands for **Gaming AGI Open SDK**.
 
@@ -6,13 +6,16 @@ GAOS stands for **Gaming AGI Open SDK**.
 where humans and AI agents compete on equal terms and are evaluated by the same
 standards to help advance AGI.**
 
-GAOS provides TypeScript and Python clients for games hosted through its turn
-protocol, plus a reusable TypeScript engine and provider-neutral agent runtime.
+GAOS is a deterministic tabletop mechanism suite, turn protocol, verification
+format, and agent runtime. Grids are one optional spatial module alongside
+hex/graph layouts, zones, cards, hidden information, portals, turn systems,
+settlement, and multi-agent evaluation.
+
 The repository contains six layers:
 
 - a genre-neutral v1 turn envelope, cursor, retry, and simultaneous-intent
   protocol;
-- Arena-specific clients and observation types for the hosted grid game;
+- reference clients and observation types for GAOS-hosted Arena sessions;
 - reusable layouts, movement, settlement, turn order, information partitions,
   zones, card composition, portals, pathfinding, pattern matching, lockstep
   re-simulation, scoring, solving, and portable JSONL replay verification
@@ -24,9 +27,9 @@ The repository contains six layers:
 - reusable launch recipes and a standalone CLI for Claude Code, Ollama-backed
   Claude Code, Codex, Cursor, Grok, OpenCode, and declarative custom agents.
 
-Product content and policy are not included. Zonoid characters and abilities,
-campaign game types, authored levels, and seasonal/server rules stay in the
-platform repository.
+Product content and policy are not included. Characters, cards, abilities,
+authored boards/decks/levels, objectives, and seasonal/server rules stay in
+the integrating product.
 
 **[Read the documentation](https://yugao-gaos.github.io/GAOS-TurnBasedGrid-SDK/)**
 or begin with the [quickstart](https://yugao-gaos.github.io/GAOS-TurnBasedGrid-SDK/quickstart).
@@ -40,14 +43,14 @@ production game and live reference.
 The **GAOS SDK is the submitted project**. This standalone repository was
 created on July 21, 2026 during OpenAI Build Week, and its complete commit and
 release history was produced during the event. The work turned the reusable
-grid engine, deterministic agent evaluation environment, provider-neutral
+mechanism engine, deterministic agent evaluation environment, provider-neutral
 drivers, and CLI integrations into an independently installable open-source
 toolkit with TypeScript and Python releases.
 
 The pre-existing Zonoid platform is outside the submission scope, but was
-central to production. As the game evolved, GAOS generalized, implemented, and
-tested the reusable capabilities needed to meet its new requirements; Zonoid
-then validated them in a live product. Judges can register at
+central to production. As the game evolved, GAOS generalized its initial
+spatial engine into reusable tabletop, multiplayer, verification, and agent
+capabilities; Zonoid then validated them in a live product. Judges can register at
 [zonoid.ai](https://zonoid.ai) and download the game without rebuilding its
 platform source. The [GPT-5.6 Sol case study](docs/building-with-gpt-5-6-sol.md)
 records Codex's role in extraction, design, implementation, review, publishing,
@@ -158,6 +161,21 @@ state-filtered gameplay actions but are valid agent choices. The environment
 validates either kind, applies the injected reducer once per recorded tick
 (or across the configured frame skip), and returns the scoring result with
 transcript-ready metrics.
+
+## More than grids
+
+GAOS supports card-only, board-only, graph, hidden-role, drafting, tactics, and
+hybrid games. Mechanism families are optional and composable:
+
+- sequential, simultaneous, response-priority, or high-frequency turns;
+- square, axial-hex, graph, multi-board, or no board at all;
+- decks, hands, bags, queues, slots, shuffling, drawing, and dealing;
+- per-seat hidden information, fog, teams, revelations, and spectators;
+- keywords, targeting, durations, phases, patterns, and loadout validation;
+- settlement, claims, resources, portals, pushes, projectiles, and transport;
+- single/multi-agent environments, solvers, lockstep, and portable replay.
+
+[Browse the complete capability map](docs/capabilities.md).
 
 ## Portable benchmark replays
 

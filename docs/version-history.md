@@ -22,6 +22,8 @@ In development.
   reducer recheck, and a direct TabletopLabs `results.replayFormat` constant.
 - Lossless adapter from the existing `TranscriptHeader`/`TranscriptAction`
   pair, allowing Arena and creator-platform results to share verifier tooling.
+- Public documentation and capability map reposition GAOS around the complete
+  tabletop suite, with grids documented as one optional mechanism family.
 
 [Portable replay specification →](/mechanisms/replay)
 

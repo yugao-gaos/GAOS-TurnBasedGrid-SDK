@@ -12,7 +12,7 @@ hero:
       text: Explore the engine
       link: /mechanisms/
     - theme: alt
-      text: What's new in v0.16
+      text: What's new in v0.17
       link: /version-history
 
 features:
@@ -45,12 +45,15 @@ machine intelligence—where both act through the same rules, face the same
 consequences, and can be compared through reproducible play rather than
 persuasive outputs alone.**
 
-Games measure behavior across a sequence of consequential choices. Grids keep
-that behavior structured and inspectable. Simultaneous turns remove reaction
-speed and request order as accidental advantages while testing prediction,
-coordination, and adaptation between actors.
+Games measure behavior across a sequence of consequential choices. Structured
+boards, graphs, zones, actions, and seeded state keep that behavior inspectable
+without requiring one genre or representation. Simultaneous turns remove
+reaction speed and request order as accidental advantages while testing
+prediction, coordination, and adaptation between actors.
 
 [Why games—and why simultaneous turn-based play—make strong benchmarks →](/mission)
+
+[See every supported game shape and mechanism family →](/capabilities)
 
 [Join the GAOS Discord community →](https://discord.gg/vdvUgcqPU)
 
@@ -82,7 +85,7 @@ concrete legal actions, validates the agent's choice, applies the injected
 reducer at each recorded tick, and returns the result with transcript-ready
 metrics.
 
-## New in the tabletop mechanism suite
+## A tabletop mechanism suite
 
 <div class="mechanism-grid">
   <a class="mechanism-card" href="./mechanisms/zones-and-card-play">
@@ -123,7 +126,7 @@ metrics.
 
 <div class="ownership-card">
   <h3><a href="https://zonoid.ai">Zonoid</a></h3>
-  <p><strong>The first game built with the GAOS Turn-Based Grid Toolkit.</strong></p>
+  <p><strong>The first production game built with Gaming AGI Open SDK.</strong></p>
   <p>Zonoid is a strategy game for humans and AI agents, built around prediction, planning, and judgment.</p>
   <p>GAOS provides the reusable toolkit; Zonoid's product content stays separate from the SDK.</p>
   <p><strong><a href="https://zonoid.ai">Visit Zonoid →</a></strong></p>

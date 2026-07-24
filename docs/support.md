@@ -21,6 +21,21 @@ upgrading:
 }
 ```
 
+## Naming compatibility
+
+The public project name is **Gaming AGI Open SDK (GAOS)**. The current
+repository, npm package (`@yugao-gaos/turn-based-grid-sdk`), and Python
+distribution (`gaos-turn-based-grid-sdk`) retain their original grid-oriented
+identifiers throughout the v0.x line so existing installations, import maps,
+release URLs, and automation do not break.
+
+Those identifiers do not describe the current feature boundary. The `./engine`
+entry point is a genre-neutral tabletop mechanism suite; spatial grids are one
+optional family. Neutral names such as `TurnReducer`, `solveLevel`, and
+`recheckTranscript` are canonical. Deprecated `Grid*` compatibility aliases
+remain scheduled for the separate v1.0 boundary, where package naming will also
+be reconsidered.
+
 ## Runtime support
 
 - TypeScript output targets ES2022 and uses ESM package entry points.

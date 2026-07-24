@@ -5,6 +5,13 @@ blocks for tabletop games. Each page in this section describes one
 mechanism family: the state it expects, the ordering it guarantees, the policy
 the product must inject, and the edge cases an integration should test.
 
+No board is required. Card-only and hidden-role games can use zones,
+information partitions, turn order, response windows, agents, and replay
+without importing geometry. Spatial games can choose square, axial-hex, or
+graph layouts, and hybrid games can connect boards and zones through portals.
+
+[Start with the capability map →](/capabilities)
+
 Established mechanism pages also include focused **Zonoid examples**. Zonoid
 is the first production consumer of this engine: its universal reducer
 supplies authored content and presentation policy while the SDK supplies the

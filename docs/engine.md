@@ -58,9 +58,10 @@ The SDK owns deterministic, product-neutral behavior:
 
 The product owns content and policy:
 
-- Zonoid character identities, sheets, traits, abilities, and loadouts;
-- campaign game-type registration and the mapping from a game type to rules;
-- authored boards, levels, thresholds, budgets, dialogue, and objectives;
+- character, card, token, trait, ability, and loadout identity and meaning;
+- game-type registration and the mapping from a game type to rules;
+- authored boards, graphs, decks, levels, thresholds, budgets, dialogue, and
+  objectives;
 - authentication, persistence, matchmaking, seasons, and server-only rules.
 
 The dividing rule is: the SDK implements **how a reusable mechanism behaves**;
