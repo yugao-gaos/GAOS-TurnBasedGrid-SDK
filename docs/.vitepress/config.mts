@@ -47,6 +47,7 @@ export default defineConfig({
     siteTitle: 'Gaming AGI Open SDK',
     nav: [
       { text: 'Mission', link: '/mission' },
+      { text: 'Capabilities', link: '/capabilities' },
       { text: 'Guide', link: '/quickstart' },
       { text: 'Mechanisms', link: '/mechanisms/' },
       { text: 'Agentic play', link: '/agentic-play' },
@@ -58,6 +59,7 @@ export default defineConfig({
         text: 'Start here',
         items: [
           { text: 'Mission and benchmark thesis', link: '/mission' },
+          { text: 'Capability map', link: '/capabilities' },
           { text: 'Quickstart', link: '/quickstart' },
           { text: 'Architecture map', link: '/architecture' },
         ],
@@ -67,7 +69,7 @@ export default defineConfig({
         items: [
           { text: 'Engine boundary', link: '/engine' },
           { text: 'Mechanism overview', link: '/mechanisms/' },
-          { text: 'Grid model', link: '/mechanisms/grid-model' },
+          { text: 'Turn and reducer model', link: '/mechanisms/grid-model' },
           { text: 'Locations and layouts', link: '/mechanisms/locations-and-layouts' },
           { text: 'Turn order and lockstep', link: '/mechanisms/turn-order-and-lockstep' },
           { text: 'Information partitions', link: '/mechanisms/information-partitions' },
@@ -138,7 +140,7 @@ export default defineConfig({
     outline: { level: [2, 3], label: 'On this page' },
     footer: {
       message: 'Reusable mechanics in the toolkit. Product content stays in the product.',
-      copyright: 'GAOS Turn-Based Grid Toolkit',
+      copyright: 'Gaming AGI Open SDK',
     },
   },
 });

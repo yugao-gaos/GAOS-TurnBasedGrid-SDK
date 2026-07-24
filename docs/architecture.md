@@ -18,6 +18,9 @@ Choose the narrowest entry point your integration needs. A deterministic game
 engine should not need the hosted Arena adapter; an MCP server should not need
 to depend on a model provider.
 
+[Browse the capability map](/capabilities) for supported game shapes, or use
+the mechanism matrix below to locate the relevant engine module.
+
 ## Mechanism map
 
 | Concern | SDK mechanism | Product supplies |

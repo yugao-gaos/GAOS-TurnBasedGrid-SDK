@@ -45,7 +45,54 @@ import { spawnCliAgent } from '@yugao-gaos/turn-based-grid-sdk/agent-cli';
 The engine and agent entry points do not import a renderer. The engine also
 does not depend on any model provider or CLI package.
 
-## Resolve a reusable mechanism
+## Choose a game shape
+
+| You are building | Start with |
+| --- | --- |
+| Card, drafting, or inventory game | [Zones and card play](/mechanisms/zones-and-card-play) |
+| Hidden-role or fog-of-war game | [Information partitions](/mechanisms/information-partitions) |
+| Square, hex, graph, or multi-board game | [Locations and layouts](/mechanisms/locations-and-layouts) |
+| Sequential or simultaneous multiplayer | [Turn order and lockstep](/mechanisms/turn-order-and-lockstep) |
+| Hybrid board/zone game | [Portals](/mechanisms/portals) |
+| Agent benchmark or tournament | [Agentic play](/agentic-play) and [portable replay](/mechanisms/replay) |
+
+The [complete capability map](/capabilities) shows which mechanism families
+compose without requiring a board.
+
+## Use zones without a board
+
+This two-seat deal uses only collection and information mechanisms:
+
+```ts
+import {
+  createZone,
+  dealRoundRobin,
+  deck,
+  defineZones,
+  hand,
+} from '@yugao-gaos/turn-based-grid-sdk/engine';
+
+const zones = defineZones({
+  deck: createZone(deck(), ['c1', 'c2', 'c3', 'c4', 'c5', 'c6']),
+  'hand:north': createZone(hand('north')),
+  'hand:south': createZone(hand('south')),
+});
+
+const dealt = dealRoundRobin(zones, {
+  from: 'deck',
+  to: ['hand:north', 'hand:south'],
+  count: 2,
+  seed: 42,
+});
+
+if (!dealt.ok) throw new Error(dealt.message);
+console.log(dealt.dealt);
+```
+
+The shuffle and deal order replay exactly from seed `42`. Seat-view helpers can
+show each hand only to its owner while preserving the public card counts.
+
+## Resolve spatial contention
 
 Movement intents qualify together. Static board policy remains an injected
 callback:

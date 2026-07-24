@@ -4,6 +4,12 @@ The SDK uses a genre-neutral reducer and turn-view vocabulary. It does not
 define terrain tokens, card schemas, level files, or a complete world state.
 Products expose those concepts through the generic contracts.
 
+::: tip Coordinates are optional
+Card-only, hidden-role, drafting, and other non-spatial games can skip the
+coordinate compatibility section and start at [Reducer boundary](#reducer-boundary).
+They still use the same turn, solver, agent, and replay contracts.
+:::
+
 ## Coordinates
 
 `Cell` is a mutable TypeScript tuple in `[x, y]` order:

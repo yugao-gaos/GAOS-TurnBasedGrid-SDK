@@ -92,20 +92,29 @@ can expose strategies and edge cases; agents can be evaluated on the same
 evolving challenges. Enjoyment does not guarantee scientific validity, but it
 helps the environment stay alive rather than becoming a solved worksheet.
 
-## Why use a grid
+## Why use structured tabletop state
 
-Grids make spatial state discrete, compact, and inspectable. Cells provide
-stable identities for movement, distance, collision, line of sight, resource
-claims, and causal traces. A structured grid observation is also independent
-of rendering quality, screen resolution, input timing, and computer-vision
-noise.
+Benchmarks need stable identities and exact transitions, not necessarily a
+square grid. GAOS models state through typed actions and named containers:
+boards, graph nodes, decks, hands, bags, queues, and slots. This makes an
+observation independent of rendering quality, screen resolution, input timing,
+and computer-vision noise.
 
-That does not make grid worlds trivial. Partial observability, simultaneous
-actors, dynamic terrain, multi-cell entities, linked systems, projectiles, and
-long settlement chains can create deep planning problems while preserving an
-exact authoritative state.
+Different containers expose different reasoning:
 
-The renderer can still be expressive for people. The benchmark core remains a
+- square and hex boards measure spatial planning, collision, fields, and line
+  of sight;
+- graph boards measure routing, territory, and network reasoning;
+- decks, hands, and bags measure uncertainty, memory, sequencing, and risk;
+- hidden roles and seat-scoped views measure inference and communication;
+- hybrid games test plans that cross several representations.
+
+Structured does not mean simple. Partial observability, simultaneous actors,
+dynamic terrain, multi-card response stacks, resource contention, portals, and
+long settlement chains create deep planning problems while preserving an exact
+authoritative state.
+
+The renderer can remain expressive for people. The benchmark core remains a
 deterministic state machine that a server, solver, replay checker, and agent can
 all execute without reproducing the visuals.
 

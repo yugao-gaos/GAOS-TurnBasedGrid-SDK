@@ -13,17 +13,18 @@ are evaluated by the same standards to help advance AGI.
 ## Project description — ready to paste
 
 GAOS (Gaming AGI Open SDK) is an Apache-2.0 TypeScript and Python toolkit for
-building deterministic, simultaneous turn-based grid games that humans and AI
-agents can play through the same authoritative rules. It packages reusable
-grid mechanics—including movement, recursive turn settlement, pathfinding and
-FOV, push chains, projectiles, transport, gates, triggers, scoring, solving,
-and replay verification—with an AI-native runtime for concrete legal actions,
-seeded episodes, transcripts, batch evaluation, model drivers, MCP tools, and
-extensible agent CLIs. This turns games into reproducible behavioral
-benchmarks: candidates face identical observations, rules, seeds, and
-consequences, while developers can inspect scores, decision traces, and failure
-modes. [Zonoid](https://zonoid.ai) is the production reference and live judge
-experience. Its pre-existing platform repository is outside the submission
+building deterministic tabletop games that humans and AI agents can play
+through the same authoritative rules. Optional mechanism families cover
+sequential and simultaneous turns; square, hex, graph, and multi-board
+layouts; decks, hands, bags, dealing, hidden information, priorities,
+durations, portals, settlement, scoring, solving, and portable replay. Its
+AI-native runtime adds concrete legal actions, seeded single- and multi-agent
+episodes, batch evaluation, model drivers, MCP tools, and extensible agent
+CLIs. This turns card games, board games, strategy games, and hybrids into
+reproducible behavioral benchmarks: candidates face identical observations,
+rules, seeds, and consequences, while developers can inspect scores, decision
+traces, and failure modes. [Zonoid](https://zonoid.ai) is the first production
+reference. Its pre-existing platform repository is outside the submission
 scope, while its evolving requirements drove and validated GAOS during
 production.
 
@@ -34,19 +35,21 @@ planning, adapting, recovering from mistakes, and handling consequences. Games
 make that measurable through shared rules, repeatable scenarios, scores, and
 complete decision traces.
 
-Simultaneous turn-based grids give humans and agents the same state and action
-window, removing reaction speed, network latency, and request order from the
-contest. Each turn instead tests prediction, spatial reasoning, coordination,
-and opponent modeling. GAOS grew from this idea while building Zonoid Labs AGI
-Arena.
+Structured turn-based games give humans and agents the same state and action
+contract while reducing reaction speed, network latency, and request order as
+accidental advantages. Boards test spatial reasoning; cards and hidden zones
+test uncertainty and memory; simultaneous play tests prediction, coordination,
+and opponent modeling. GAOS grew from the grid-based Zonoid Labs AGI Arena and
+expanded into a product-neutral tabletop suite.
 
 ## What it does
 
-GAOS is an open-source TypeScript and Python toolkit for deterministic,
-simultaneous turn-based grid games. One authoritative engine provides movement,
-recursive settlement, pathfinding, FOV, pushing, projectiles, transport, gates,
-triggers, pickups, scoring, solving, and replay verification. Agent environments,
-model drivers, MCP tools, and extensible CLIs add legal actions, seeded episodes,
+GAOS is an open-source TypeScript and Python toolkit for deterministic tabletop
+games. One authoritative engine provides turn order, simultaneous collection,
+hidden information, zones and card composition, square/hex/graph layouts,
+movement, recursive settlement, portals, resources, scoring, solving, and
+portable multi-level replay verification. Agent environments, model drivers,
+MCP tools, and extensible CLIs add legal actions, seeded episodes, self-play,
 transcripts, and batch evaluation without graphical UI automation.
 
 Zonoid was central to production: as the game evolved, GAOS generalized,
@@ -76,12 +79,13 @@ extensions provider-neutral.
 
 ## Accomplishments that we're proud of
 
-We shipped a public Apache-2.0 repository, a documented v0.9.2 release, prebuilt
-npm and Python packages, detailed mechanism pages, replayable transcripts,
-solver and scoring support, MCP tools, and extensible model and CLI drivers. Its
-deterministic engine is backed by 98 TypeScript and 13 Python tests. Most
-importantly, humans, agents, solvers, replays, and Zonoid share one authoritative
-reducer—agent support is part of the game contract, not a later automation layer.
+We shipped a public Apache-2.0 repository, a documented v0.16.0 release,
+prebuilt npm and Python packages, a broad tabletop mechanism reference,
+portable replay, solver and scoring support, MCP tools, and extensible model
+and CLI drivers. Its deterministic engine is backed by 219 TypeScript and 25
+Python tests, excluding live integration skips. Most importantly, humans,
+agents, solvers, and replay verifiers share one authoritative reducer—agent
+support is part of the game contract, not a later automation layer.
 
 ## What we learned
 
@@ -109,7 +113,7 @@ research data from Zonoid while keeping its product content outside the SDK.
   https://yugao-gaos.github.io/GAOS-TurnBasedGrid-SDK/
 - **Live game and prebuilt download:** https://zonoid.ai
 - **Latest SDK release:**
-  https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK/releases/tag/v0.9.2
+  https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK/releases/tag/v0.16.0
 - **Codex `/feedback` Session ID:**
   `019f8458-7a8d-7010-9227-500c99df5e04`
 - **License:** Apache License 2.0
@@ -151,7 +155,7 @@ Install the prebuilt public v0.9.2 release archive without a GitHub token:
 mkdir gaos-judge
 cd gaos-judge
 npm init -y
-npm install 'https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK/releases/download/v0.9.2/yugao-gaos-turn-based-grid-sdk-0.9.2.tgz'
+npm install 'https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK/releases/download/v0.16.0/yugao-gaos-turn-based-grid-sdk-0.16.0.tgz'
 ```
 
 Verify an engine import and deterministic score:
@@ -168,7 +172,7 @@ Install the prebuilt public wheel:
 
 ```sh
 python3 -m venv .venv
-.venv/bin/python -m pip install 'https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK/releases/download/v0.9.2/gaos_turn_based_grid_sdk-0.9.2-py3-none-any.whl'
+.venv/bin/python -m pip install 'https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK/releases/download/v0.16.0/gaos_turn_based_grid_sdk-0.16.0-py3-none-any.whl'
 .venv/bin/python -c "import agilabs_arena; print(agilabs_arena.__name__)"
 ```
 
