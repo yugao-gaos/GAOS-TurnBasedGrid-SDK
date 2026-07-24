@@ -9,7 +9,7 @@ SDK; authored meaning and product policy stay with the game.
 | --- | --- | --- |
 | package root | GAOS-hosted Arena client and Arena observation types | `fetch` |
 | `./protocol` | Generic turn envelopes, cursors, idempotency, simultaneous intents, game registry | JSON-serializable values |
-| `./engine` | Grid mechanics, geometry, settlement, solver, replay, scoring, agent environment and tools | Injected world/reducer policy |
+| `./engine` | Tabletop mechanisms, layouts, settlement, solver, replay, scoring, agent environment and tools | Injected world/reducer policy |
 | `./agent` | Provider-neutral driver contract and keyed HTTP model drivers | `fetch` and a provider key |
 | `./agent-cli` | CLI discovery, launch recipes, MCP configuration, subprocess lifecycle | Node.js |
 | Python distribution | Hosted client, Gym-style environment, agent evaluation helpers | Python 3.10+, standard library only at runtime |
@@ -22,6 +22,12 @@ to depend on a model provider.
 
 | Concern | SDK mechanism | Product supplies |
 | --- | --- | --- |
+| Locations and layouts | stable container addressing; square, hex, and graph topology | boards, adjacency, terrain and container ids |
+| Turn order and lockstep | seat rotation, participation/outcome shapes, canonical input ordering and digests | phases, response policy, snapshots and serialization |
+| Information partitions | per-seat reducer views, zone/fog redaction, team sets and leak checks | secret state, visibility rules, memory and spectator delivery |
+| Zones and card play | immutable collection transfers, deals, keyword layers, response priority, targets, durations, phases and validation | card identity, rules, costs, legal responses and effects |
+| Portals | bounded heterogeneous transit, groups, capacity arbitration and atomic commit order | activation, placement, transformations, occupancy and arrival effects |
+| Patterns | maximal run and motif recognition over arbitrary layouts | token meaning, overlap policy, cascades and scoring |
 | Movement | simultaneous destinations, footprints, collisions, rotations, swaps, priority | terrain and static-blocker policy |
 | Turn consequences | ordered worklist, waves, coalescing, once-only work, deferral, convergence guard, causal trace | job meaning, mutations, stable keys and priorities |
 | Propagation | breadth-first once-per-identity chain reactions | neighbors and effects |
@@ -32,6 +38,7 @@ to depend on a model provider.
 | Decisions | generic behavior-tree traversal and shortest-path search | conditions, leaf actions and traversability |
 | Outcomes | star calculation and budget-failure precedence | thresholds and budgets |
 | Verification | seeded randomness, solving, transcript re-simulation | reducer, levels and action schema |
+| Agent episodes | seat-redacted single- or multi-agent turns, frame skip, rewards and versioned transcripts | policies, wait action, reward semantics and hosted execution |
 
 Read the [mechanism reference](/mechanisms/) for detailed contracts, ordering,
 examples, edge cases, and product responsibilities.
@@ -41,7 +48,7 @@ examples, edge cases, and product responsibilities.
 ```text
                   product content and policy
                             |
-                     GridReducer adapter
+                     TurnReducer adapter
                             |
           +-----------------+-----------------+
           |                 |                 |
@@ -83,9 +90,10 @@ Agent support is part of the engine contract, not a UI automation layer:
 
 1. A seeded reducer produces deterministic observations and outcomes.
 2. The environment exposes complete, concrete legal actions.
-3. Illegal model output is rejected before reaching the reducer.
-4. Every decision produces a versioned transcript suitable for replay.
-5. The same cases can be evaluated across local policies, keyed models, or
+3. Seat-scoped agents receive only their redacted observation and legal actions.
+4. Illegal model output is rejected before reaching the reducer.
+5. Every decision produces a versioned transcript suitable for replay.
+6. The same cases can be evaluated across local policies, keyed models, or
    MCP-capable CLIs.
 
 That makes agent play reproducible, provider-neutral, headless, and directly

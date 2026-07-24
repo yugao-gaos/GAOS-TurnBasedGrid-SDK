@@ -1,21 +1,21 @@
-import type { GridSubmittedAction, GridTurnView } from './contracts.js';
+import type { SubmittedAction, TurnView } from './contracts.js';
 import type {
   AgentEnvironment,
   AgentTranscript,
   AgentTurn,
 } from './agent-environment.js';
 
-export type AgentPolicy<TView extends GridTurnView> = (
+export type AgentPolicy<TView extends TurnView<unknown, unknown>> = (
   turn: AgentTurn<TView>,
-) => GridSubmittedAction | Promise<GridSubmittedAction>;
+) => SubmittedAction | Promise<SubmittedAction>;
 
-export interface AgentEpisodeResult<TLevel, TView extends GridTurnView> {
+export interface AgentEpisodeResult<TLevel, TView extends TurnView<unknown, unknown>> {
   finalTurn: AgentTurn<TView>;
-  transcript: AgentTranscript<TLevel>;
+  transcript: AgentTranscript<TLevel, TView>;
 }
 
 /** Run one complete episode using a synchronous or asynchronous agent policy. */
-export async function runAgentEpisode<TLevel, TState, TView extends GridTurnView>(
+export async function runAgentEpisode<TLevel, TState, TView extends TurnView<unknown, unknown>>(
   environment: AgentEnvironment<TLevel, TState, TView>,
   policy: AgentPolicy<TView>,
 ): Promise<AgentEpisodeResult<TLevel, TView>> {
@@ -30,12 +30,12 @@ export interface AgentBatchCase<TLevel> {
   seed: number;
 }
 
-export interface AgentBatchEpisode<TLevel, TView extends GridTurnView>
+export interface AgentBatchEpisode<TLevel, TView extends TurnView<unknown, unknown>>
   extends AgentEpisodeResult<TLevel, TView> {
   id: string;
 }
 
-export interface AgentBatchResult<TLevel, TView extends GridTurnView> {
+export interface AgentBatchResult<TLevel, TView extends TurnView<unknown, unknown>> {
   episodes: Array<AgentBatchEpisode<TLevel, TView>>;
   summary: {
     episodes: number;
@@ -48,10 +48,10 @@ export interface AgentBatchResult<TLevel, TView extends GridTurnView> {
 }
 
 /** Sequential deterministic batch runner suitable for evaluation harnesses. */
-export async function evaluateAgentEpisodes<TLevel, TState, TView extends GridTurnView>(
+export async function evaluateAgentEpisodes<TLevel, TState, TView extends TurnView<unknown, unknown>>(
   cases: readonly AgentBatchCase<TLevel>[],
   createEnvironment: (episode: AgentBatchCase<TLevel>) => AgentEnvironment<TLevel, TState, TView>,
-  policy: (turn: AgentTurn<TView>, episode: AgentBatchCase<TLevel>) => GridSubmittedAction | Promise<GridSubmittedAction>,
+  policy: (turn: AgentTurn<TView>, episode: AgentBatchCase<TLevel>) => SubmittedAction | Promise<SubmittedAction>,
 ): Promise<AgentBatchResult<TLevel, TView>> {
   const episodes: Array<AgentBatchEpisode<TLevel, TView>> = [];
   for (const episode of cases) {

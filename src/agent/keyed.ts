@@ -1,4 +1,5 @@
-import type { GridSubmittedAction } from '../engine/contracts.js';
+import type { SubmittedAction } from '../engine/contracts.js';
+import { locationKey } from '../engine/locations.js';
 import {
   isLegalAgentDecision,
   type AgentDecision,
@@ -106,8 +107,8 @@ const DEFAULT_SYSTEM_PROMPT = [
   'You are controlling a turn-based grid environment.',
   'Choose exactly one entry from legalActions or systemActions.',
   'Return only JSON with this shape:',
-  '{"reasoning":"brief explanation","action":{"id":"action id","x":0,"y":0,"index":0},"message":"optional"}',
-  'Omit x, y, or index when the selected legal action does not contain it.',
+  '{"reasoning":"brief explanation","action":{"id":"action id","x":0,"y":0,"index":0,"boardId":"board","seat":"seat","targets":[{"container":"board","coord":[1,2]}]},"message":"optional"}',
+  'Omit x, y, index, boardId, zoneId, seat, or targets when the selected legal action does not contain it.',
 ].join('\n');
 
 function record(value: unknown): Record<string, unknown> | undefined {
@@ -149,6 +150,33 @@ function optionalInteger(value: unknown, name: string): number | undefined {
   return value as number;
 }
 
+function optionalString(value: unknown, name: string): string | undefined {
+  if (value === undefined) return undefined;
+  if (typeof value !== 'string' || value.length === 0) {
+    throw new TypeError(`agent decision ${name} must be a non-empty string`);
+  }
+  return value;
+}
+
+function optionalTargets(value: unknown): SubmittedAction['targets'] {
+  if (value === undefined) return undefined;
+  if (!Array.isArray(value)) throw new TypeError('agent decision targets must be an array');
+  return value.map((candidate, index) => {
+    const target = record(candidate);
+    if (!target) throw new TypeError(`agent decision targets[${index}] must be an object`);
+    const location = {
+      container: target.container,
+      coord: target.coord,
+    } as SubmittedAction['targets'] extends readonly (infer T)[] | undefined ? T : never;
+    try {
+      locationKey(location);
+    } catch (error) {
+      throw new TypeError(`agent decision targets[${index}] is invalid`, { cause: error });
+    }
+    return location;
+  });
+}
+
 /** Parse a model response into the provider-neutral action contract. */
 export function parseAgentDecision(text: string): AgentDecision {
   const json = balancedJsonObject(text);
@@ -163,11 +191,15 @@ export function parseAgentDecision(text: string): AgentDecision {
       ? candidate.action
       : undefined;
   if (!id?.trim()) throw new TypeError('agent decision action.id must be a non-empty string');
-  const action: GridSubmittedAction = {
+  const action: SubmittedAction = {
     id,
     ...(candidate.x !== undefined ? { x: optionalInteger(candidate.x, 'x') } : {}),
     ...(candidate.y !== undefined ? { y: optionalInteger(candidate.y, 'y') } : {}),
     ...(candidate.index !== undefined ? { index: optionalInteger(candidate.index, 'index') } : {}),
+    ...(candidate.boardId !== undefined ? { boardId: optionalString(candidate.boardId, 'boardId') } : {}),
+    ...(candidate.zoneId !== undefined ? { zoneId: optionalString(candidate.zoneId, 'zoneId') } : {}),
+    ...(candidate.seat !== undefined ? { seat: optionalString(candidate.seat, 'seat') } : {}),
+    ...(candidate.targets !== undefined ? { targets: optionalTargets(candidate.targets) } : {}),
   };
   return {
     action,

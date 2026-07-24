@@ -69,10 +69,10 @@ export interface NearestReachableCellOptions {
   compareEqualDistance?: (a: Cell, b: Cell) => number;
 }
 
-export interface ReachableCellPath {
-  goal: Cell;
+export interface ReachableCellPath<TCell = Cell> {
+  goal: TCell;
   /** Shortest path excluding the start and including `goal`. */
-  path: Cell[];
+  path: TCell[];
 }
 
 /** Shortest cardinal path, excluding the start and including the goal. */
@@ -116,7 +116,7 @@ export function shortestGridPath(options: ShortestGridPathOptions): Cell[] {
  */
 export function nearestReachableCellPath(
   options: NearestReachableCellOptions,
-): ReachableCellPath | undefined {
+): ReachableCellPath<Cell> | undefined {
   const { width, height, start, isBlocked, qualifies } = options;
   const steps = options.steps ?? CARDINAL_STEPS;
   const key = ([x, y]: Cell): string => `${x},${y}`;

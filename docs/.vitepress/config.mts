@@ -2,45 +2,45 @@ import { defineConfig } from 'vitepress';
 
 export default defineConfig({
   title: 'Gaming AGI Open SDK',
-  description: 'Games as benchmarks for human and AI agents.',
+  description: 'Deterministic tabletop mechanisms for human and AI agents.',
   base: '/GAOS-TurnBasedGrid-SDK/',
   cleanUrls: true,
   lastUpdated: true,
   head: [
     ['meta', { name: 'theme-color', content: '#6657d9' }],
     ['meta', { property: 'og:type', content: 'website' }],
-    ['meta', { property: 'og:title', content: 'GAOS Turn-Based Grid Toolkit' }],
+    ['meta', { property: 'og:title', content: 'Gaming AGI Open SDK' }],
     ['meta', {
       property: 'og:url',
       content: 'https://yugao-gaos.github.io/GAOS-TurnBasedGrid-SDK/',
     }],
     ['meta', {
       property: 'og:description',
-      content: 'Games as benchmarks for human and AI agents.',
+      content: 'Deterministic tabletop mechanisms for human and AI agents.',
     }],
     ['meta', {
       property: 'og:image',
-      content: 'https://yugao-gaos.github.io/GAOS-TurnBasedGrid-SDK/gaos-grid-sdk-social.png',
+      content: 'https://yugao-gaos.github.io/GAOS-TurnBasedGrid-SDK/gaos-tabletop-sdk-social.png',
     }],
-    ['meta', { property: 'og:image:width', content: '1200' }],
-    ['meta', { property: 'og:image:height', content: '630' }],
+    ['meta', { property: 'og:image:width', content: '1730' }],
+    ['meta', { property: 'og:image:height', content: '909' }],
     ['meta', {
       property: 'og:image:alt',
-      content: 'GAOS Turn-Based Grid Toolkit — Games as benchmarks for human and AI agents.',
+      content: 'Gaming AGI Open SDK — deterministic tabletop mechanisms for humans and AI agents.',
     }],
     ['meta', { name: 'twitter:card', content: 'summary_large_image' }],
-    ['meta', { name: 'twitter:title', content: 'GAOS Turn-Based Grid Toolkit' }],
+    ['meta', { name: 'twitter:title', content: 'Gaming AGI Open SDK' }],
     ['meta', {
       name: 'twitter:description',
-      content: 'Games as benchmarks for human and AI agents.',
+      content: 'Deterministic tabletop mechanisms for human and AI agents.',
     }],
     ['meta', {
       name: 'twitter:image',
-      content: 'https://yugao-gaos.github.io/GAOS-TurnBasedGrid-SDK/gaos-grid-sdk-social.png',
+      content: 'https://yugao-gaos.github.io/GAOS-TurnBasedGrid-SDK/gaos-tabletop-sdk-social.png',
     }],
     ['meta', {
       name: 'twitter:image:alt',
-      content: 'GAOS Turn-Based Grid Toolkit — Games as benchmarks for human and AI agents.',
+      content: 'Gaming AGI Open SDK — deterministic tabletop mechanisms for humans and AI agents.',
     }],
   ],
   themeConfig: {
@@ -50,7 +50,7 @@ export default defineConfig({
       { text: 'Guide', link: '/quickstart' },
       { text: 'Mechanisms', link: '/mechanisms/' },
       { text: 'Agentic play', link: '/agentic-play' },
-      { text: 'v0.9.1', link: '/releases' },
+      { text: 'History', link: '/version-history' },
       { text: 'Discord', link: 'https://discord.gg/vdvUgcqPU' },
     ],
     sidebar: [
@@ -68,6 +68,12 @@ export default defineConfig({
           { text: 'Engine boundary', link: '/engine' },
           { text: 'Mechanism overview', link: '/mechanisms/' },
           { text: 'Grid model', link: '/mechanisms/grid-model' },
+          { text: 'Locations and layouts', link: '/mechanisms/locations-and-layouts' },
+          { text: 'Turn order and lockstep', link: '/mechanisms/turn-order-and-lockstep' },
+          { text: 'Information partitions', link: '/mechanisms/information-partitions' },
+          { text: 'Zones and card play', link: '/mechanisms/zones-and-card-play' },
+          { text: 'Portals', link: '/mechanisms/portals' },
+          { text: 'Pattern matching', link: '/mechanisms/patterns' },
           { text: 'Simultaneous movement', link: '/mechanisms/movement' },
           { text: 'Geometry and FOV', link: '/mechanisms/geometry' },
           { text: 'Turn settlement', link: '/settlement' },
@@ -98,6 +104,7 @@ export default defineConfig({
           { text: 'Scoring and AI action limits', link: '/mechanisms/scoring' },
           { text: 'Solver', link: '/mechanisms/solver' },
           { text: 'Replay verification', link: '/mechanisms/replay' },
+          { text: 'High-frequency turns', link: '/high-frequency' },
         ],
       },
       {
@@ -113,7 +120,9 @@ export default defineConfig({
         items: [
           { text: 'Built with GPT-5.6 Sol', link: '/building-with-gpt-5-6-sol' },
           { text: 'Support and compatibility', link: '/support' },
-          { text: 'Releasing', link: '/releases' },
+          { text: 'Version history', link: '/version-history' },
+          { text: 'Batch implementation review', link: '/rfcs/implementation-review' },
+          { text: 'Release process and migrations', link: '/releases' },
         ],
       },
     ],

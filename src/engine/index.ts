@@ -1,6 +1,11 @@
 export {
+  rectFootprint,
+  resolveKeyedMoves,
   resolveMoves,
   type Cell,
+  type KeyedMover,
+  type KeyedMoveOptions,
+  type MoveResolution,
   type Mover,
 } from './movement.js';
 export {
@@ -116,24 +121,230 @@ export {
   type StarThresholds,
 } from './scoring.js';
 export {
+  type ActionDefinition,
+  type GridTargetingView,
+  type GridViewNamespace,
+  type Outcome,
+  type Participation,
+  type SubmittedAction,
+  type TargetChoiceView,
+  type TurnReducer,
+  type TurnView,
+  type ZoneEntryView,
+  type ZoneViewNamespace,
+  type ZoneViews,
+  /** @deprecated Use `ActionDefinition`. */
   type GridActionDefinition,
+  /** @deprecated Use `TurnReducer`. */
   type GridReducer,
+  /** @deprecated Use `SubmittedAction`. */
   type GridSubmittedAction,
+  /** @deprecated Use `TurnView`. */
   type GridTurnView,
 } from './contracts.js';
 export {
+  enumerateActions,
+  solveLevel,
+  type SolveResult,
+  type SolverOptions,
+  /** @deprecated Use `enumerateActions`. */
   enumerateGridActions,
+  /** @deprecated Use `solveLevel`. */
   solveGridLevel,
+  /** @deprecated Use `SolveResult`. */
   type GridSolveResult,
+  /** @deprecated Use `SolverOptions`. */
   type GridSolverOptions,
 } from './solver.js';
 export {
+  recheckTranscript,
   recheckGridTranscript,
   runLevelSeed,
+  type RecheckResult,
+  type RecheckOptions,
+  type TranscriptAction,
+  type TranscriptHeader,
+  type TranscriptVisibility,
+  /** @deprecated Use `RecheckResult`. */
   type GridRecheckResult,
+  /** @deprecated Use `TranscriptAction`. */
   type GridTranscriptAction,
+  /** @deprecated Use `TranscriptHeader`. */
   type GridTranscriptHeader,
 } from './replay.js';
+export {
+  locationKey,
+  type LocationCoord,
+  type LocationRef,
+} from './locations.js';
+export {
+  createGraphLayout,
+  createHexAxialLayout,
+  createSquareLayout,
+  fieldCells,
+  lineOfSight,
+  nearestReachablePath,
+  shortestPath,
+  type BoardLayout,
+  type FieldOptions,
+  type GraphLayoutOptions,
+  type HexAxialLayoutOptions,
+  type NearestReachablePathOptions,
+  type ShortestPathOptions,
+  type SquareLayoutOptions,
+} from './layouts.js';
+export {
+  activeSeat,
+  advanceTurn,
+  createTurnOrder,
+  eliminateSeat,
+  queueExtraTurn,
+  queueSkip,
+  reorderSeats,
+  reverseTurnOrder,
+  type TurnOrderState,
+} from './turn-order.js';
+export {
+  findPatterns,
+  type PatternMatch,
+  type PatternSpec,
+  type TokenRef,
+} from './patterns.js';
+export {
+  InformationLeakError,
+  assertNoInformationLeak,
+  createInformationRevelation,
+  deriveSeatView,
+  outcomeForTeams,
+  revelationsForSeat,
+  teamForSeat,
+  teamVisibility,
+  visibilityAllows,
+  type BoardEntityView,
+  type BoardObservation,
+  type BoardVisibilityPolicy,
+  type InformationLeakCheckOptions,
+  type InformationPartitionPolicies,
+  type InformationRevelation,
+  type SpectatorVisibilityPolicy,
+  type TeamDefinition,
+  type TeamRanking,
+  type Visibility,
+  type ZoneVisibilityPolicy,
+} from './information.js';
+export {
+  canonicalizeLockstepInputs,
+  resimulate,
+  stateDigest,
+  type LockstepInput,
+  type ResimulationOptions,
+  type StateDigestOptions,
+} from './lockstep.js';
+export {
+  bag,
+  commitZoneTransfer,
+  createZone,
+  dealBatches,
+  dealRoundRobin,
+  deck,
+  defineZones,
+  discard,
+  drawFromZone,
+  hand,
+  planZoneTransfer,
+  queue,
+  shuffleZone,
+  slotRow,
+  type DealResult,
+  type DealSpec,
+  type DrawResult,
+  type ZoneAccess,
+  type ZoneArrival,
+  type ZoneCollection,
+  type ZoneCommitOptions,
+  type ZoneCommitResult,
+  type ZoneConfig,
+  type ZoneInsert,
+  type ZoneOrder,
+  type ZoneState,
+  type ZoneTransferFailure,
+  type ZoneTransferFailureCode,
+  type ZoneTransferPlan,
+  type ZoneTransferSpec,
+} from './zones.js';
+export {
+  KeywordRegistry,
+  resolveKeywordLayerDetails,
+  resolveKeywordLayers,
+  type ActiveKeyword,
+  type KeywordDefinition,
+  type KeywordKind,
+  type ResolvedKeyword,
+} from './keywords.js';
+export {
+  openResponseWindow,
+  passResponsePriority,
+  responsePrioritySeat,
+  responseWindowParticipation,
+  submitResponse,
+  timeoutResponsePriority,
+  unwindResponseWindow,
+  type ResponsePass,
+  type ResponsePassReason,
+  type ResponseStackEntry,
+  type ResponseWindow,
+} from './response-windows.js';
+export {
+  enumerateTargetChoices,
+  type TargetChoiceEnumeration,
+  type TargetEnumerationOptions,
+  type TargetSpec,
+} from './targeting.js';
+export {
+  advanceDurations,
+  spendStatusCounters,
+  type Duration,
+  type DurationAdvanceResult,
+  type DurationBoundary,
+  type TimedStatus,
+} from './durations.js';
+export {
+  activePhase,
+  advancePhase,
+  createPhaseState,
+  type PhaseAdvanceResult,
+  type PhaseBoundaryEvent,
+  type PhaseDefinition,
+  type PhaseState,
+} from './phases.js';
+export {
+  validateDeck,
+  type DeckConstraint,
+  type DeckEntry,
+  type DeckValidationResult,
+  type DeckViolation,
+  type DeckViolationCode,
+} from './deck-validation.js';
+export {
+  commitPortalTransits,
+  planPortalTransits,
+  type CommittedPortalTransit,
+  type PortalAdaptation,
+  type PortalBoardAdaptation,
+  type PortalCommitResult,
+  type PortalCommitter,
+  type PortalEdge,
+  type PortalEntrant,
+  type PortalInsertPolicy,
+  type PortalPlanningOptions,
+  type PortalPolicy,
+  type PortalRejectedEntrant,
+  type PortalTransit,
+  type PortalTransitFailure,
+  type PortalTransitFailureCode,
+  type PortalTransitPlan,
+  type PortalZoneAdaptation,
+} from './portals.js';
 export {
   CARDINAL_STEPS,
   CARDINAL_VECTORS,
@@ -179,3 +390,17 @@ export {
   type AgentToolDefinition,
   type AgentToolName,
 } from './agent-tools.js';
+export {
+  MULTI_AGENT_TRANSCRIPT_VERSION,
+  MultiAgentEnvironment,
+  MultiAgentEnvironmentError,
+  runMultiAgentEpisode,
+  type MultiAgentEnvironmentErrorCode,
+  type MultiAgentEnvironmentOptions,
+  type MultiAgentEpisodeResult,
+  type MultiAgentPolicy,
+  type MultiAgentSeatTurn,
+  type MultiAgentTranscript,
+  type MultiAgentTranscriptRound,
+  type MultiAgentTurn,
+} from './multi-agent-environment.js';

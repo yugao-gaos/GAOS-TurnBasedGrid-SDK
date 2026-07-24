@@ -81,6 +81,54 @@
   margin-top: 0;
 }
 
+.mechanism-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+  margin: 1.5rem 0;
+}
+
+.mechanism-card {
+  display: block;
+  min-width: 0;
+  border: 1px solid color-mix(in srgb, var(--vp-c-brand-1) 24%, var(--vp-c-divider));
+  border-radius: 14px;
+  padding: 1.15rem;
+  color: inherit !important;
+  text-decoration: none !important;
+  background:
+    linear-gradient(145deg, color-mix(in srgb, var(--vp-c-brand-soft) 45%, transparent), transparent 62%),
+    var(--vp-c-bg-soft);
+  transition: transform 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
+}
+
+.mechanism-card:hover {
+  transform: translateY(-2px);
+  border-color: var(--vp-c-brand-1);
+  box-shadow: 0 12px 30px rgba(45, 38, 92, 0.12);
+}
+
+.mechanism-card h3 {
+  margin: 0.35rem 0 0.55rem;
+  color: var(--vp-c-text-1);
+  font-size: 1.05rem;
+}
+
+.mechanism-card p {
+  margin: 0;
+  color: var(--vp-c-text-2);
+  font-size: 0.9rem;
+  line-height: 1.6;
+}
+
+.mechanism-kicker {
+  color: var(--vp-c-brand-1);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
 .mechanism-video {
   margin: 1.5rem 0 0;
 }
@@ -103,7 +151,14 @@
 }
 
 @media (max-width: 700px) {
-  .ownership-grid {
+  .ownership-grid,
+  .mechanism-grid {
     grid-template-columns: 1fr;
+  }
+}
+
+@media (min-width: 701px) and (max-width: 960px) {
+  .mechanism-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }

@@ -1,14 +1,14 @@
 import type {
-  GridActionDefinition,
-  GridSubmittedAction,
+  ActionDefinition,
+  SubmittedAction,
 } from '../engine/contracts.js';
 
 export interface AgentDriverContext<TObservation = unknown> {
   observation: TObservation;
-  legalActions: readonly GridSubmittedAction[];
+  legalActions: readonly SubmittedAction[];
   /** Always-available semantic controls, separate from gameplay legality. */
-  systemActions?: readonly GridSubmittedAction[];
-  actionDefinitions?: readonly GridActionDefinition[];
+  systemActions?: readonly SubmittedAction[];
+  actionDefinitions?: readonly ActionDefinition[];
   step: number;
   systemPrompt?: string;
   guidance?: readonly string[];
@@ -21,7 +21,7 @@ export interface AgentTokenUsage {
 }
 
 export interface AgentDecision {
-  action: GridSubmittedAction;
+  action: SubmittedAction;
   reasoning?: string;
   message?: string;
   usage?: AgentTokenUsage;
@@ -86,18 +86,22 @@ export class AgentDriverRegistry<TObservation = unknown> {
   }
 }
 
-function actionKey(action: GridSubmittedAction): string {
+function actionKey(action: SubmittedAction): string {
   return JSON.stringify({
     id: action.id,
     ...(action.x !== undefined ? { x: action.x } : {}),
     ...(action.y !== undefined ? { y: action.y } : {}),
     ...(action.index !== undefined ? { index: action.index } : {}),
+    ...(action.boardId !== undefined ? { boardId: action.boardId } : {}),
+    ...(action.zoneId !== undefined ? { zoneId: action.zoneId } : {}),
+    ...(action.seat !== undefined ? { seat: action.seat } : {}),
+    ...(action.targets !== undefined ? { targets: action.targets } : {}),
   });
 }
 
 export function isLegalAgentDecision(
   decision: AgentDecision,
-  legalActions: readonly GridSubmittedAction[],
+  legalActions: readonly SubmittedAction[],
 ): boolean {
   const key = actionKey(decision.action);
   return legalActions.some((action) => actionKey(action) === key);

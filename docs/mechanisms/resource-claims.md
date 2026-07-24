@@ -5,7 +5,7 @@ shared snapshot but cannot all consume or mutate the same resource. Examples
 include two actors taking one pickup, overlapping beams consuming a cell, or a
 flight and placement both reserving the same destination.
 
-## Neutral all-fail policy
+## Arbitration policies
 
 ```ts
 const result = arbitrateResourceClaims([
@@ -15,9 +15,8 @@ const result = arbitrateResourceClaims([
 ]);
 ```
 
-Any claim sharing **any** resource with another claim becomes contested in
-full. The SDK does not pick a priority or lexical winner. In this example only
-`safe` is accepted.
+The default `all-fail` policy makes every claim sharing **any** resource with
+another claim contested in full. In this example only `safe` is accepted.
 
 For a multi-resource claim, conflict on one resource contests the whole action:
 
@@ -28,6 +27,14 @@ flight claims [cell:5]
 ```
 
 This avoids partial execution of an atomic action.
+
+Pass `{ mode: 'priority' }` to accept claims in lower numeric `priority`
+order, breaking ties by authored input order. A multi-resource claim is
+accepted only when every resource is still unclaimed, so arbitration never
+partially commits an action. Claims rejected by an earlier winner appear in
+`contested`. The product chooses the policy explicitly for draft picks or
+other winner-takes-resource rules. Portals apply the same policy shape while
+adding destination capacity.
 
 ## Result ordering
 
@@ -57,10 +64,10 @@ for (const conflict of arbitration.contested) emitCollision(conflict);
 
 ## Product responsibilities
 
-The product defines resource identity and what a contested action means. It may
-fail, bounce, wait, refund, or enqueue a different effect. If the design needs
-initiative or random winner selection, implement that policy outside this
-neutral helper and record the chosen result in deterministic state or transcript.
+The product defines resource identity, claim priority, and what a
+contested action means. It may fail, bounce, wait, refund, or enqueue a
+different effect. Random winner selection remains product policy: derive the
+priorities from a recorded seed before arbitration.
 
 ## Zonoid example
 

@@ -6,6 +6,7 @@ import {
   GameRegistry,
   collectIntent,
   createIntentWindow,
+  createParticipationIntentWindow,
   pendingEnvelope,
   turnEnvelope,
   type CommandSubmission,
@@ -153,6 +154,21 @@ describe('v1 simultaneous intent collection', () => {
       revision: 3,
       turn: { hand: ['A', 'K'], custom: { phase: 'bid' } },
     });
+  });
+
+  it('maps sequential and simultaneous participation to compatible intent windows', () => {
+    expect(createParticipationIntentWindow('s1', 2, {
+      mode: 'sequential',
+      activeSeat: 'north',
+    }).participants).toEqual(['north']);
+    expect(createParticipationIntentWindow('s1', 2, {
+      mode: 'simultaneous',
+      seats: ['south', 'north'],
+    }).participants).toEqual(['north', 'south']);
+    expect(() => createParticipationIntentWindow('s1', 2, {
+      mode: 'sequential',
+      activeSeat: 'north seat',
+    })).toThrow('participant ids');
   });
 
   it('registers externally supplied games by stable id and version', () => {

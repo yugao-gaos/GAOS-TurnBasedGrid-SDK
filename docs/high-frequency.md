@@ -1,0 +1,79 @@
+# High-frequency turns and deterministic lockstep
+
+Continuous-feeling play uses the same reducer at a fixed tick cadence. The SDK
+does not own a scheduler, wall clock, socket, signaling, interpolation, or
+late-join transport.
+
+## Reducer guidance
+
+A tick with no submitted intents should take a near-free empty-input path:
+advance only scheduled systems whose explicit boundary is crossed. Reducers
+must be deterministic, but they need not be persistently immutable. At high
+frequency, in-place mutation with copy-on-write rollback deltas is legitimate.
+The solver is the exception: it explores sibling actions from one parent, so
+its adapter must snapshot or otherwise protect the parent state.
+
+Keep reducer state free of wall-clock reads. Hosts translate deadlines,
+elapsed time, disconnects, and substitutions into ordinary tick-numbered
+inputs. Mint ids from deterministic counters or seeded streams, and avoid
+cross-engine transcendental floating-point operations unless the result is
+quantized.
+
+## Seat lifecycle
+
+Disconnect, rejoin, and human/bot substitution are host events injected as
+ordinary inputs. A product may switch a disconnected seat to a behavior-tree
+driver, make it auto-wait, or call `eliminateSeat` and apply a declared policy
+to its entities. Reconnection changes the seat's driver back; ownership and
+authoritative state never move. Record the chosen transition with its turn or
+tick so rollback and replay reach the same result.
+
+## Sparse transcripts and rollback
+
+`TranscriptAction.tick` records input deltas. Empty ticks may be omitted;
+`recheckTranscript` and `resimulate` infer gaps and call a product
+`applyEmptyTick` callback when supplied. Lockstep inputs are canonically
+ordered by tick, lexical seat id, then authored action order.
+
+Peers can compare `stateDigest` values at agreed ticks to locate the first
+desync. The product must provide canonical serialization for maps, sets, and
+presentation-only fields. Pure peer-to-peer lockstep replicates full state:
+per-seat views prevent accidental disclosure but not a modified client's
+maphack.
+
+For open-information games, products may use optimistic P2P plus a dispute
+verifier: exchange signed canonical inputs and digests, accept matching
+results, and send a divergent transcript to an authoritative server for
+deterministic replay. This provides integrity, fault detection, and
+arbitration. It does not provide confidentiality: a client that passively
+reads replicated secrets can still submit a legal action and produce the same
+digest as every honest peer.
+
+Competitive hidden-information games therefore keep authoritative secret
+state in a server-side session resolver—for example, one Durable Object per
+match—and distribute only `viewFor(state, seat)` observations. The resolver
+collects canonical intents, applies the reducer, retains the full replay
+record, and sends each client its redacted result. P2P input exchange or
+digest comparison may still be used around that authority, but no untrusted
+client receives another seat's hand, deck order, or unrevealed fog state.
+
+## Agents and frame skip
+
+Agents act at decision points, not every simulation tick. `AgentEnvironment`
+accepts `frameSkip`; each `step` repeats the chosen action, or a
+product-provided `continueAction`, for up to that many reducer ticks. It stops
+early at termination, truncation, or when the continuation is no longer
+legal. Every applied tick, observation, and reward is retained in transcript
+version 1.2, so replay uses the recorded actions without multiplying the frame
+skip again.
+
+`MultiAgentEnvironment` applies a canonical simultaneous batch through
+`TurnReducer.applyIntents`. Each seat receives only `viewFor(state, seat)` and
+its legal actions. Missing policies or deadline misses contribute a legal
+`wait`. One shared transcript records the redacted per-seat views, canonical
+intent batches, and per-seat rewards/outcomes.
+
+The hosted HTTP turn protocol is suitable for asynchronous turns. It shares
+the participation and canonical collection model, but it is not a 60 Hz
+transport. Realtime products bring WebRTC, relay, or socket transport and use
+the reducer, lockstep inputs, rollback, and digest helpers directly.

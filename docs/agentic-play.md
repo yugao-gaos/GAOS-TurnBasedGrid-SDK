@@ -6,9 +6,9 @@ control code.
 
 ## Environment contract
 
-`AgentEnvironment` wraps any injected `GridReducer`. One turn contains:
+`AgentEnvironment` wraps any injected `TurnReducer`. One turn contains:
 
-- the complete product observation;
+- the complete product observation, or the configured seat's redacted view;
 - action definitions and fully parameterized concrete legal actions;
 - the last reward and cumulative episode metrics;
 - separate `terminated` and `truncated` flags;
@@ -21,7 +21,9 @@ const env = new AgentEnvironment({
   reducer,
   level,
   seed: 42,
+  seat: 'north',
   maxSteps: 1_000,
+  frameSkip: 4,
 });
 
 let turn = env.reset();
@@ -33,13 +35,41 @@ while (!turn.done) {
 const transcript = env.transcript();
 ```
 
-Levels are snapshotted with `structuredClone` when an episode resets so later
-caller mutations cannot rewrite its transcript. Products with non-cloneable
-level values can supply `snapshotLevel` in the environment options.
+When `seat` is configured, the environment calls `reducer.viewFor` when that
+method exists, derives legal actions from the returned view, attaches the seat
+to reducer submissions, and rejects an explicit conflicting seat. It never
+uses the full view to enumerate a seat's legal actions.
+
+Levels and observations are snapshotted with `structuredClone` so later caller
+mutations cannot rewrite a transcript. Products with non-cloneable values can
+supply `snapshotLevel` and `snapshotObservation` in the environment options.
+Transcript version 1.2 includes the seat, configured frame skip, the redacted
+initial observation, and the redacted observation following every applied
+tick. By default the chosen action repeats between decision points. Supply
+`continueAction` for a product-defined continuation action; repetition stops
+early when that action becomes illegal or the episode ends. Replay consumes
+the recorded per-tick actions once and does not apply frame skip a second time.
 
 Products may inject reward shaping and custom action enumeration. The default
-reward is terminal stars, or `1` for a win without stars. Reducer failure is a
+reward is terminal stars, or `1` for a win without stars. For a decided
+multi-seat outcome it uses that seat's score when present, otherwise `1` for
+rank one and `0` for another rank. Reducer failure or a decided outcome is a
 normal termination; reaching `maxSteps` is a safety truncation.
+
+## Multi-agent episodes
+
+`MultiAgentEnvironment` runs independent seat policies against one reducer.
+Sequential participation applies the active seat's non-wait action and gives
+other seats the configured legal `wait`. Simultaneous participation collects
+one intent per seat and calls `reducer.applyIntents` exactly once with canonical
+lexical seat ordering.
+
+Each policy receives only its seat's `viewFor` observation and concrete legal
+actions. `runMultiAgentEpisode` solicits policies concurrently; a missing
+policy contributes `wait`. The shared transcript stores redacted per-seat
+observations, canonical batches, and per-seat rewards/outcomes so an arena can
+replay and compare model-vs-model episodes without exposing another seat's
+hidden state.
 
 ## Evaluation
 
@@ -109,7 +139,7 @@ key checks have a 30-second deadline by default; `timeoutMs: 0` disables it.
 Caller cancellation, driver interruption, retry waits, and the deadline share
 one abort lifecycle.
 
-Model responses are parsed into the same `GridSubmittedAction` contract and
+Model responses are parsed into the same `SubmittedAction` contract and
 must exactly match a concrete legal action before the reducer sees them. API
 keys are held only by driver instances, are redacted from request failures,
 and are not written to transcripts.

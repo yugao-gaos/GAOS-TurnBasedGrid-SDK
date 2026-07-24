@@ -20,7 +20,7 @@ npm install @yugao-gaos/turn-based-grid-sdk
 You can also pin a repository release without configuring the package registry:
 
 ```sh
-npm install 'git+https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK.git#v0.12.0'
+npm install 'git+https://github.com/yugao-gaos/GAOS-TurnBasedGrid-SDK.git#v0.16.0'
 ```
 
 ## Choose the narrowest entry point
@@ -72,24 +72,27 @@ boundaries, see the [mechanism reference](/mechanisms/).
 ## Make your reducer agent-ready
 
 Implement three deterministic operations: initialize state, apply an action,
-and project a turn view.
+and project a turn view. Imperfect-information games may additionally project
+a view for one seat.
 
 ```ts
 import {
   AgentEnvironment,
-  type GridReducer,
+  type TurnReducer,
 } from '@yugao-gaos/turn-based-grid-sdk/engine';
 
-const reducer: GridReducer<MyLevel, MyState, MyView> = {
+const reducer: TurnReducer<MyLevel, MyState, MyView> = {
   init: (level, seed) => createState(level, seed),
   apply: (state, action) => applyAction(state, action),
   view: (state) => observeState(state),
+  viewFor: (state, seat) => observeStateForSeat(state, seat),
 };
 
 const environment = new AgentEnvironment({
   reducer,
   level,
   seed: 42,
+  seat: 'north',
 });
 
 let turn = environment.reset();
@@ -100,9 +103,11 @@ while (!turn.done) {
 console.log(environment.transcript());
 ```
 
-`MyView` extends the SDK's `GridTurnView`; its action definitions are expanded
+`MyView` extends the SDK's `TurnView`; its action definitions are expanded
 into fully parameterized legal actions before an agent chooses. Continue with
-[Agentic play](/agentic-play).
+[information partitions](/mechanisms/information-partitions) and
+[Agentic play](/agentic-play). Perfect-information games may omit both
+`viewFor` and `seat`.
 
 ## Connect to a hosted Arena
 

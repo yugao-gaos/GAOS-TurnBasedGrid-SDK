@@ -1,26 +1,27 @@
 import type {
-  GridReducer,
-  GridSubmittedAction,
-  GridTurnView,
+  GridViewNamespace,
+  SubmittedAction,
+  TurnReducer,
+  TurnView,
 } from './contracts.js';
 
-export interface GridSolveResult {
+export interface SolveResult {
   min: number | null;
   capped: boolean;
   explored: number;
-  actions: GridSubmittedAction[] | null;
+  actions: SubmittedAction[] | null;
 }
 
-export interface GridSolverOptions<TState> {
+export interface SolverOptions<TState> {
   maxActions: number;
   maxNodes?: number;
   seed?: number;
   /** Override state normalization when a runtime has other volatile fields. */
   stateKey?: (state: TState) => string;
   /** Override action enumeration for a custom observation surface. */
-  actions?: (view: GridTurnView) => GridSubmittedAction[];
+  actions?: (view: TurnView<unknown, unknown>) => SubmittedAction[];
   /** Product policy can exclude actions that cannot help search, such as restart. */
-  includeAction?: (action: GridSubmittedAction, view: GridTurnView) => boolean;
+  includeAction?: (action: SubmittedAction, view: TurnView<unknown, unknown>) => boolean;
 }
 
 const VOLATILE_KEYS = ['lastEvents', 'actionsUsed', 'narrative', 'log'];
@@ -63,9 +64,52 @@ function stateFingerprint(value: string): string {
   );
 }
 
-/** Enumerate the standard no-parameter, indexed, and cell-targeted actions. */
-export function enumerateGridActions(view: GridTurnView): GridSubmittedAction[] {
-  const submitted: GridSubmittedAction[] = [];
+function isGridNamespace(
+  grid: unknown,
+): grid is GridViewNamespace {
+  if (!grid || typeof grid !== 'object' || Array.isArray(grid)) return false;
+  const candidate = grid as Record<string, unknown>;
+  if (candidate['targetableCells'] !== undefined) {
+    return Array.isArray(candidate['targetableCells']);
+  }
+  if (candidate['actionTargeting'] !== undefined) {
+    const targeting = candidate['actionTargeting'];
+    return !!targeting && typeof targeting === 'object' && !Array.isArray(targeting)
+      && Object.values(targeting).every((value) => (
+        !!value && typeof value === 'object' && !Array.isArray(value)
+        && Array.isArray((value as Record<string, unknown>)['targetableCells'])
+      ));
+  }
+  return Object.keys(candidate).length === 0;
+}
+
+function gridTargets(
+  view: TurnView<unknown, unknown>,
+  actionId: string,
+): Array<{ boardId?: string; cells: readonly [number, number][] }> {
+  const legacyHud = view.hud as TurnView['hud'] & GridViewNamespace;
+  const legacyCells = legacyHud.actionTargeting?.[actionId]?.targetableCells
+    ?? legacyHud.targetableCells;
+  if (legacyCells) return [{ cells: legacyCells }];
+  if (!view.grid) return [];
+  if (isGridNamespace(view.grid)) {
+    const cells = view.grid.actionTargeting?.[actionId]?.targetableCells
+      ?? view.grid.targetableCells;
+    return cells ? [{ cells }] : [];
+  }
+  if (!view.grid || typeof view.grid !== 'object' || Array.isArray(view.grid)) return [];
+  return Object.entries(view.grid).flatMap(([boardId, value]) => {
+    if (!isGridNamespace(value)) return [];
+    const namespace = value;
+    const cells = namespace.actionTargeting?.[actionId]?.targetableCells
+      ?? namespace.targetableCells;
+    return cells ? [{ boardId, cells }] : [];
+  });
+}
+
+/** Enumerate standard no-parameter, indexed, board, and declarative-target actions. */
+export function enumerateActions(view: TurnView<unknown, unknown>): SubmittedAction[] {
+  const submitted: SubmittedAction[] = [];
   for (const action of view.actions) {
     switch (action.params) {
       case 'none':
@@ -80,22 +124,50 @@ export function enumerateGridActions(view: GridTurnView): GridSubmittedAction[] 
         break;
       }
       case 'xy':
-        for (const [x, y] of view.hud.actionTargeting?.[action.id]?.targetableCells
-          ?? view.hud.targetableCells ?? []) {
-          submitted.push({ id: action.id, x, y });
+        for (const { boardId, cells } of gridTargets(view, action.id)) {
+          for (const [x, y] of cells) {
+            submitted.push({
+              id: action.id,
+              x,
+              y,
+              ...(boardId === undefined ? {} : { boardId }),
+            });
+          }
         }
         break;
+      case 'targets': {
+        if (!action.targetSpecId) {
+          throw new TypeError(`targeted action ${action.id} requires targetSpecId`);
+        }
+        const enumeration = view.targetChoices?.[action.targetSpecId];
+        if (!enumeration) {
+          throw new RangeError(`missing target choices for ${action.targetSpecId}`);
+        }
+        if (enumeration.truncated) {
+          throw new RangeError(`target choices for ${action.targetSpecId} are truncated`);
+        }
+        for (const targets of enumeration.choices) {
+          submitted.push({
+            id: action.id,
+            targets: targets.map((target) => ({
+              container: target.container,
+              coord: Array.isArray(target.coord) ? [...target.coord] : target.coord,
+            })),
+          });
+        }
+        break;
+      }
     }
   }
   return submitted;
 }
 
-/** Breadth-first shortest-path solver over any deterministic grid reducer. */
-export function solveGridLevel<TLevel, TState, TView extends GridTurnView>(
-  reducer: GridReducer<TLevel, TState, TView>,
+/** Breadth-first shortest-path solver over any deterministic turn reducer. */
+export function solveLevel<TLevel, TState, TView extends TurnView<unknown, unknown>>(
+  reducer: TurnReducer<TLevel, TState, TView>,
   level: TLevel,
-  options: GridSolverOptions<TState>,
-): GridSolveResult {
+  options: SolverOptions<TState>,
+): SolveResult {
   const maxNodes = options.maxNodes ?? 5_000_000;
   if (!Number.isSafeInteger(options.maxActions) || options.maxActions < 0) {
     throw new RangeError('maxActions must be a non-negative safe integer');
@@ -104,7 +176,7 @@ export function solveGridLevel<TLevel, TState, TView extends GridTurnView>(
     throw new RangeError('maxNodes must be a positive safe integer');
   }
   const keyOf = options.stateKey ?? defaultStateKey;
-  const actionsFor = options.actions ?? enumerateGridActions;
+  const actionsFor = options.actions ?? enumerateActions;
   const start = reducer.init(level, options.seed ?? 1);
   if (reducer.view(start).status === 'won') {
     return { min: 0, capped: false, explored: 1, actions: [] };
@@ -116,10 +188,10 @@ export function solveGridLevel<TLevel, TState, TView extends GridTurnView>(
   const traceChunkNodes = 1 << traceChunkBits;
   const traceChunkMask = traceChunkNodes - 1;
   const traceChunks: Uint32Array[] = [];
-  const internedActions: GridSubmittedAction[] = [];
+  const internedActions: SubmittedAction[] = [];
   const actionIds = new Map<string, number>();
 
-  const internAction = (action: GridSubmittedAction): number => {
+  const internAction = (action: SubmittedAction): number => {
     const key = JSON.stringify(action);
     const existing = actionIds.get(key);
     if (existing !== undefined) return existing;
@@ -129,7 +201,7 @@ export function solveGridLevel<TLevel, TState, TView extends GridTurnView>(
     return id;
   };
 
-  const setTrace = (nodeId: number, parentId: number, action: GridSubmittedAction): void => {
+  const setTrace = (nodeId: number, parentId: number, action: SubmittedAction): void => {
     const chunkId = nodeId >>> traceChunkBits;
     const chunk = traceChunks[chunkId]
       ?? (traceChunks[chunkId] = new Uint32Array(traceChunkNodes * 2));
@@ -139,7 +211,7 @@ export function solveGridLevel<TLevel, TState, TView extends GridTurnView>(
   };
 
   let explored = 1;
-  const pathTo = (fromId: number, last: GridSubmittedAction): GridSubmittedAction[] => {
+  const pathTo = (fromId: number, last: SubmittedAction): SubmittedAction[] => {
     const path = [last];
     for (let nodeId = fromId; nodeId !== 0;) {
       const chunk = traceChunks[nodeId >>> traceChunkBits]!;
@@ -185,3 +257,15 @@ export function solveGridLevel<TLevel, TState, TView extends GridTurnView>(
   }
   return { min: null, capped: false, explored, actions: null };
 }
+
+/** @deprecated Renamed to `SolveResult`; this alias will be removed in v1.0. */
+export type GridSolveResult = SolveResult;
+
+/** @deprecated Renamed to `SolverOptions`; this alias will be removed in v1.0. */
+export type GridSolverOptions<TState> = SolverOptions<TState>;
+
+/** @deprecated Renamed to `enumerateActions`; this alias will be removed in v1.0. */
+export const enumerateGridActions = enumerateActions;
+
+/** @deprecated Renamed to `solveLevel`; this alias will be removed in v1.0. */
+export const solveGridLevel = solveLevel;
