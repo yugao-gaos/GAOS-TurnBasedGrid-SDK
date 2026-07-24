@@ -46,6 +46,7 @@ export default defineConfig({
   themeConfig: {
     siteTitle: 'Gaming AGI Open SDK',
     nav: [
+      { text: 'Play demos', link: '/demos/' },
       { text: 'Mission', link: '/mission' },
       { text: 'Capabilities', link: '/capabilities' },
       { text: 'Guide', link: '/quickstart' },
@@ -55,6 +56,16 @@ export default defineConfig({
       { text: 'Discord', link: 'https://discord.gg/vdvUgcqPU' },
     ],
     sidebar: [
+      {
+        text: 'Playable demos',
+        items: [
+          { text: 'Demo arcade', link: '/demos/' },
+          { text: 'Prism Vault — Match-3', link: '/demos/match-3' },
+          { text: 'Midnight House — Blackjack', link: '/demos/blackjack' },
+          { text: 'Ashfall Crossing — Strategy', link: '/demos/grid-strategy' },
+          { text: 'Cinder Vault — Roguelike', link: '/demos/card-grid-roguelike' },
+        ],
+      },
       {
         text: 'Start here',
         items: [
